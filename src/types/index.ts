@@ -1,0 +1,15 @@
+export interface Class {
+  id: string
+  name: string
+  description?: string
+  studentCount: number
+  createdAt: string
+}
+
+export interface Student {
+  id: string
+  name: string
+  points: number
+  classId: string
+  className: string
+}
