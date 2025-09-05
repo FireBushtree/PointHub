@@ -7,4 +7,8 @@ export default antfu({
   ignores: [
     'src-tauri/target/debug/**',
   ],
+  rules: {
+    'react-dom/no-missing-button-type': 'off',
+    'react-hooks-extra/no-direct-set-state-in-use-effect': 'off',
+  },
 })

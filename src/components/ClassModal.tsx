@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
 import type { Class } from '../types'
+import { useEffect, useState } from 'react'
 
 interface ClassModalProps {
   isOpen: boolean
@@ -11,39 +11,41 @@ interface ClassModalProps {
 export default function ClassModal({ isOpen, onClose, onSubmit, classData }: ClassModalProps) {
   const [formData, setFormData] = useState({
     name: '',
-    description: ''
+    description: '',
   })
 
   useEffect(() => {
     if (classData) {
       setFormData({
         name: classData.name,
-        description: classData.description || ''
+        description: classData.description || '',
       })
-    } else {
+    }
+    else {
       setFormData({
         name: '',
-        description: ''
+        description: '',
       })
     }
   }, [classData, isOpen])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.name.trim()) return
-    
+    if (!formData.name.trim())
+      return
+
     onSubmit({
       name: formData.name.trim(),
       description: formData.description.trim() || undefined,
-      studentCount: classData?.studentCount || 0
     })
     onClose()
   }
 
-  if (!isOpen) return null
+  if (!isOpen)
+    return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-gray-900">
@@ -68,7 +70,7 @@ export default function ClassModal({ isOpen, onClose, onSubmit, classData }: Cla
               type="text"
               required
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
               placeholder="请输入班级名称"
             />
@@ -80,7 +82,7 @@ export default function ClassModal({ isOpen, onClose, onSubmit, classData }: Cla
             </label>
             <textarea
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={e => setFormData({ ...formData, description: e.target.value })}
               rows={3}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
               placeholder="请输入班级描述（可选）"
@@ -91,13 +93,13 @@ export default function ClassModal({ isOpen, onClose, onSubmit, classData }: Cla
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+              className="flex-1 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm cursor-pointer"
             >
               取消
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors"
+              className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm cursor-pointer"
             >
               {classData ? '保存' : '创建'}
             </button>

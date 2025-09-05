@@ -1,48 +1,51 @@
-import { useState, useEffect } from 'react'
 import type { Student } from '../types'
+import { useEffect, useState } from 'react'
 
 interface SimpleStudentModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: { name: string; points: number }) => void
+  onSubmit: (data: { name: string, points: number }) => void
   studentData?: Student | null
 }
 
 export default function SimpleStudentModal({ isOpen, onClose, onSubmit, studentData }: SimpleStudentModalProps) {
   const [formData, setFormData] = useState({
     name: '',
-    points: 0
+    points: 0,
   })
 
   useEffect(() => {
     if (studentData) {
       setFormData({
         name: studentData.name,
-        points: studentData.points
+        points: studentData.points,
       })
-    } else {
+    }
+    else {
       setFormData({
         name: '',
-        points: 0
+        points: 0,
       })
     }
   }, [studentData, isOpen])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.name.trim()) return
-    
+    if (!formData.name.trim())
+      return
+
     onSubmit({
       name: formData.name.trim(),
-      points: formData.points
+      points: formData.points,
     })
     onClose()
   }
 
-  if (!isOpen) return null
+  if (!isOpen)
+    return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-gray-900">
@@ -67,7 +70,7 @@ export default function SimpleStudentModal({ isOpen, onClose, onSubmit, studentD
               type="text"
               required
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
               placeholder="请输入学生姓名"
             />
@@ -81,7 +84,7 @@ export default function SimpleStudentModal({ isOpen, onClose, onSubmit, studentD
               type="number"
               required
               value={formData.points}
-              onChange={(e) => setFormData({ ...formData, points: Number(e.target.value) })}
+              onChange={e => setFormData({ ...formData, points: Number(e.target.value) })}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
               placeholder="请输入积分"
               min="0"
@@ -92,13 +95,13 @@ export default function SimpleStudentModal({ isOpen, onClose, onSubmit, studentD
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+              className="flex-1 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm cursor-pointer"
             >
               取消
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors"
+              className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm cursor-pointer"
             >
               {studentData ? '保存' : '创建'}
             </button>
