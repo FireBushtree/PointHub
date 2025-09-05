@@ -20,15 +20,20 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 22
 
-      - name: Install frontend deps
-        run: npm install
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install
 
       - name: Build Tauri app
-        run: npm run tauri build
+        run: pnpm tauri build
 
-      # 上传 exe 到 Release
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
