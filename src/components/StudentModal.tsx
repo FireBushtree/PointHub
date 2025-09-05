@@ -5,7 +5,7 @@ import { classApi } from '../services/tauriApi'
 interface StudentModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: Omit<Student, 'id'>) => void
+  onSubmit: (data: Omit<Student, 'id' | 'createdAt'>) => void
   studentData?: Student | null
 }
 
