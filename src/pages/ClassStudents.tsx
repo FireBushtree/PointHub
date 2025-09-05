@@ -1,11 +1,11 @@
 import type { Class, Student } from '../types'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import * as XLSX from 'xlsx'
+import { Confirm, useConfirm } from '../components/Confirm'
 import SimpleStudentModal from '../components/SimpleStudentModal'
 import { ToastContainer, useToast } from '../components/Toast'
-import { Confirm, useConfirm } from '../components/Confirm'
-import { classApi, studentApi, fileApi } from '../services/tauriApi'
-import * as XLSX from 'xlsx'
+import { classApi, fileApi, studentApi } from '../services/tauriApi'
 
 export default function ClassStudents() {
   const { classId } = useParams<{ classId: string }>()
@@ -127,7 +127,8 @@ export default function ClassStudents() {
 
   const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (!file) return
+    if (!file)
+      return
 
     if (!file.name.match(/\.(xlsx|xls)$/i)) {
       showError('请上传Excel文件(.xlsx 或 .xls)')
@@ -135,7 +136,7 @@ export default function ClassStudents() {
     }
 
     setImportLoading(true)
-    
+
     try {
       const reader = new FileReader()
       reader.onload = async (e) => {
@@ -144,10 +145,10 @@ export default function ClassStudents() {
           const workbook = XLSX.read(data, { type: 'array' })
           const sheetName = workbook.SheetNames[0]
           const worksheet = workbook.Sheets[sheetName]
-          
+
           // 转换为JSON，跳过第一行标题
           const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][]
-          
+
           if (jsonData.length < 2) {
             showError('Excel文件内容为空或格式错误')
             setImportLoading(false)
@@ -155,11 +156,11 @@ export default function ClassStudents() {
           }
 
           // 从第二行开始处理数据
-          const studentsToImport = jsonData.slice(1).filter(row => row[0] && row[1] !== undefined).map(row => ({
+          const studentsToImport = jsonData.slice(1).filter(row => row[0]).map(row => ({
             name: String(row[0]).trim(),
-            points: Number(row[1]) || 0,
+            points: row[1] === undefined || row[1] === null || row[1] === '' ? 0 : (Number(row[1]) || 0),
             classId: classId!,
-            className: classInfo!.name
+            className: classInfo!.name,
           }))
 
           if (studentsToImport.length === 0) {
@@ -174,26 +175,29 @@ export default function ClassStudents() {
             try {
               await studentApi.create(studentData)
               successCount++
-            } catch (error) {
+            }
+            catch (error) {
               console.error(`Failed to create student ${studentData.name}:`, error)
             }
           }
 
           await loadData()
           showSuccess(`成功导入 ${successCount} 个学生`)
-          
-        } catch (error) {
+        }
+        catch (error) {
           console.error('Failed to parse Excel:', error)
           showError('Excel文件解析失败，请检查文件格式')
-        } finally {
+        }
+        finally {
           setImportLoading(false)
           // 清空文件输入
           event.target.value = ''
         }
       }
-      
+
       reader.readAsArrayBuffer(file)
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Failed to read file:', error)
       showError('文件读取失败')
       setImportLoading(false)
@@ -210,17 +214,17 @@ export default function ClassStudents() {
       // 准备导出数据
       const exportData = [
         ['学生姓名', '积分'], // 标题行
-        ...students.map(student => [student.name, student.points])
+        ...students.map(student => [student.name, student.points]),
       ]
 
       // 创建工作簿
       const worksheet = XLSX.utils.aoa_to_sheet(exportData)
       const workbook = XLSX.utils.book_new()
-      
+
       // 设置列宽
       worksheet['!cols'] = [
         { wch: 15 }, // 学生姓名列宽
-        { wch: 10 }  // 积分列宽
+        { wch: 10 }, // 积分列宽
       ]
 
       // 添加工作表
@@ -228,27 +232,68 @@ export default function ClassStudents() {
 
       // 生成文件名
       const fileName = `${classInfo?.name || '班级'}_学生名单_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`
-      
+
       // 生成二进制数据
       const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
       const uint8Array = new Uint8Array(excelBuffer)
-      
+
       // 保存到桌面
       const savedPath = await fileApi.saveToDesktop(fileName, uint8Array)
-      
+
       showSuccess(`文件已保存到桌面: ${fileName}`)
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Failed to export Excel:', error)
       showError('导出失败，请重试')
+    }
+  }
+
+  const handleDownloadTemplate = async () => {
+    try {
+      // 创建模板数据
+      const templateData = [
+        ['学生姓名', '积分'], // 标题行
+        ['张三', 85],
+        ['李四', 92],
+        ['王五', 78],
+      ]
+
+      // 创建工作簿
+      const worksheet = XLSX.utils.aoa_to_sheet(templateData)
+      const workbook = XLSX.utils.book_new()
+
+      // 设置列宽
+      worksheet['!cols'] = [
+        { wch: 15 }, // 学生姓名列宽
+        { wch: 10 }, // 积分列宽
+      ]
+
+      // 添加工作表
+      XLSX.utils.book_append_sheet(workbook, worksheet, '学生导入模板')
+
+      // 生成二进制数据
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+      const uint8Array = new Uint8Array(excelBuffer)
+
+      // 保存到桌面
+      await fileApi.saveToDesktop('学生导入模板.xlsx', uint8Array)
+
+      showSuccess('模板已下载到桌面: 学生导入模板.xlsx')
+    }
+    catch (error) {
+      console.error('Failed to download template:', error)
+      showError('模板下载失败，请重试')
     }
   }
 
   const handleSortByPoints = () => {
     if (sortBy === 'default') {
       setSortBy('points-desc')
-    } else if (sortBy === 'points-desc') {
+    }
+    else if (sortBy === 'points-desc') {
       setSortBy('points-asc')
-    } else {
+    }
+    else {
       setSortBy('default')
     }
   }
@@ -258,7 +303,8 @@ export default function ClassStudents() {
     .sort((a, b) => {
       if (sortBy === 'points-asc') {
         return a.points - b.points
-      } else if (sortBy === 'points-desc') {
+      }
+      else if (sortBy === 'points-desc') {
         return b.points - a.points
       }
       // default: keep original order (by created_at desc from backend)
@@ -342,7 +388,17 @@ export default function ClassStudents() {
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
             </label>
-            
+
+            <button
+              onClick={handleDownloadTemplate}
+              className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-1.5 text-sm cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span>下载模板</span>
+            </button>
+
             <button
               onClick={handleExportExcel}
               className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-1.5 text-sm cursor-pointer"
@@ -352,7 +408,7 @@ export default function ClassStudents() {
               </svg>
               <span>导出Excel</span>
             </button>
-            
+
             <button
               onClick={handleCreate}
               className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-1.5 text-sm cursor-pointer"
@@ -529,7 +585,7 @@ export default function ClassStudents() {
           toasts={toasts}
           onRemoveToast={removeToast}
         />
-        
+
         <Confirm
           isOpen={confirmState.isOpen}
           title={confirmState.title}
