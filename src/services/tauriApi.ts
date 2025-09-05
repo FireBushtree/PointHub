@@ -1,5 +1,5 @@
-import { invoke } from '@tauri-apps/api/core'
 import type { Class, Student } from '../types'
+import { invoke } from '@tauri-apps/api/core'
 
 // Class API
 export const classApi = {
@@ -11,8 +11,8 @@ export const classApi = {
     return await invoke('create_class', {
       request: {
         name: classData.name,
-        description: classData.description
-      }
+        description: classData.description,
+      },
     })
   },
 
@@ -21,14 +21,14 @@ export const classApi = {
       id,
       request: {
         name: classData.name,
-        description: classData.description
-      }
+        description: classData.description,
+      },
     })
   },
 
   async delete(id: string): Promise<void> {
     return await invoke('delete_class', { id })
-  }
+  },
 }
 
 // Student API
@@ -41,19 +41,19 @@ export const studentApi = {
     return await invoke('get_students_by_class', { classId })
   },
 
-  async create(studentData: Omit<Student, 'id'>): Promise<Student> {
+  async create(studentData: Omit<Student, 'id' | 'createdAt'>): Promise<Student> {
     return await invoke('create_student', {
       request: {
         name: studentData.name,
         points: studentData.points,
-        class_id: studentData.classId
-      }
+        class_id: studentData.classId,
+      },
     })
   },
 
   async update(id: string, studentData: Partial<Omit<Student, 'id'>>): Promise<Student> {
     const request: any = {}
-    
+
     if (studentData.name !== undefined) {
       request.name = studentData.name
     }
@@ -69,15 +69,15 @@ export const studentApi = {
 
   async delete(id: string): Promise<void> {
     return await invoke('delete_student', { id })
-  }
+  },
 }
 
 // File operations
 export const fileApi = {
   async saveToDesktop(filename: string, data: Uint8Array): Promise<string> {
-    return await invoke('save_file_to_desktop', { 
-      filename, 
-      data: Array.from(data)
+    return await invoke('save_file_to_desktop', {
+      filename,
+      data: Array.from(data),
     })
-  }
+  },
 }

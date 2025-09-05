@@ -10,19 +10,19 @@ interface ConfirmState {
 export function useConfirm() {
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
-    message: ''
+    message: '',
   })
 
   const showConfirm = useCallback((
     message: string,
     onConfirm: () => void,
-    title?: string
+    title?: string,
   ) => {
     setConfirmState({
       isOpen: true,
       title,
       message,
-      onConfirm
+      onConfirm,
     })
   }, [])
 
@@ -41,6 +41,6 @@ export function useConfirm() {
     confirmState,
     showConfirm,
     handleConfirm,
-    handleCancel
+    handleCancel,
   }
 }

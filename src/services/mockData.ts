@@ -6,8 +6,8 @@ export const mockClasses: Class[] = [
     name: '计算机科学与技术2021级1班',
     description: '计算机科学与技术专业',
     studentCount: 32,
-    createdAt: '2021-09-01'
-  }
+    createdAt: '2021-09-01',
+  },
 ]
 
 export const mockStudents: Student[] = [
@@ -16,6 +16,6 @@ export const mockStudents: Student[] = [
     name: '张三',
     points: 85,
     classId: '1',
-    className: '计算机科学与技术2021级1班'
-  }
+    className: '计算机科学与技术2021级1班',
+  },
 ]

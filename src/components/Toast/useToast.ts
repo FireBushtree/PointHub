@@ -30,6 +30,6 @@ export function useToast() {
     toasts,
     showSuccess,
     showError,
-    removeToast
+    removeToast,
   }
 }

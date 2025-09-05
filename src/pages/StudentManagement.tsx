@@ -1,8 +1,8 @@
 import type { Class, Student } from '../types'
 import { useEffect, useState } from 'react'
+import { Confirm, useConfirm } from '../components/Confirm'
 import StudentModal from '../components/StudentModal'
 import { ToastContainer, useToast } from '../components/Toast'
-import { Confirm, useConfirm } from '../components/Confirm'
 import { classApi, studentApi } from '../services/api'
 
 export default function StudentManagement() {
@@ -15,10 +15,6 @@ export default function StudentManagement() {
   const [selectedClassId, setSelectedClassId] = useState('')
   const { toasts, showSuccess, showError, removeToast } = useToast()
   const { confirmState, showConfirm, handleConfirm, handleCancel } = useConfirm()
-
-  useEffect(() => {
-    loadData()
-  }, [])
 
   const loadData = async () => {
     try {
@@ -37,6 +33,10 @@ export default function StudentManagement() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadData()
+  }, [])
 
   const handleCreate = () => {
     setEditingStudent(null)
@@ -255,7 +255,7 @@ export default function StudentManagement() {
           toasts={toasts}
           onRemoveToast={removeToast}
         />
-        
+
         <Confirm
           isOpen={confirmState.isOpen}
           title={confirmState.title}

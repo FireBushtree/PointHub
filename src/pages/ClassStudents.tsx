@@ -238,7 +238,7 @@ export default function ClassStudents() {
       const uint8Array = new Uint8Array(excelBuffer)
 
       // 保存到桌面
-      const savedPath = await fileApi.saveToDesktop(fileName, uint8Array)
+      await fileApi.saveToDesktop(fileName, uint8Array)
 
       showSuccess(`文件已保存到桌面: ${fileName}`)
     }

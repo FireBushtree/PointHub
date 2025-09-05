@@ -6,6 +6,7 @@ export default antfu({
   react: true,
   ignores: [
     'src-tauri/target/debug/**',
+    'src-tauri/target/release/**',
   ],
   rules: {
     'react-dom/no-missing-button-type': 'off',

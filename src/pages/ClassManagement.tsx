@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import type { Class } from '../types'
-import { classApi } from '../services/tauriApi'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import ClassCard from '../components/ClassCard'
 import ClassModal from '../components/ClassModal'
-import { ToastContainer, useToast } from '../components/Toast'
 import { Confirm, useConfirm } from '../components/Confirm'
+import { ToastContainer, useToast } from '../components/Toast'
+import { classApi } from '../services/tauriApi'
 
 export default function ClassManagement() {
   const navigate = useNavigate()
@@ -16,21 +16,23 @@ export default function ClassManagement() {
   const { toasts, showSuccess, showError, removeToast } = useToast()
   const { confirmState, showConfirm, handleConfirm, handleCancel } = useConfirm()
 
-  useEffect(() => {
-    loadClasses()
-  }, [])
-
   const loadClasses = async () => {
     try {
       setLoading(true)
       const data = await classApi.getAll()
       setClasses(data)
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Failed to load classes:', error)
-    } finally {
+    }
+    finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadClasses()
+  }, [])
 
   const handleClassClick = (classId: string) => {
     navigate(`/class/${classId}`)
@@ -52,7 +54,8 @@ export default function ClassManagement() {
         await classApi.delete(id)
         await loadClasses()
         showSuccess('班级删除成功')
-      } catch (error) {
+      }
+      catch (error) {
         console.error('Failed to delete class:', error)
         showError('删除失败，请重试')
       }
@@ -64,13 +67,15 @@ export default function ClassManagement() {
       if (editingClass) {
         await classApi.update(editingClass.id, data)
         showSuccess('班级修改成功')
-      } else {
+      }
+      else {
         await classApi.create(data)
         showSuccess('班级创建成功')
       }
       await loadClasses()
       setModalOpen(false)
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Failed to save class:', error)
       showError('保存失败，请重试')
     }
@@ -106,33 +111,35 @@ export default function ClassManagement() {
           </button>
         </div>
 
-        {classes.length === 0 ? (
-          <div className="text-center py-12">
-            <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">暂无班级</h3>
-            <p className="text-gray-600 mb-6">开始创建第一个班级吧</p>
-            <button
-              onClick={handleCreate}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm cursor-pointer"
-            >
-              新增班级
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {classes.map((classData) => (
-              <ClassCard
-                key={classData.id}
-                classData={classData}
-                onClick={handleClassClick}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-            ))}
-          </div>
-        )}
+        {classes.length === 0
+          ? (
+              <div className="text-center py-12">
+                <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">暂无班级</h3>
+                <p className="text-gray-600 mb-6">开始创建第一个班级吧</p>
+                <button
+                  onClick={handleCreate}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm cursor-pointer"
+                >
+                  新增班级
+                </button>
+              </div>
+            )
+          : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {classes.map(classData => (
+                  <ClassCard
+                    key={classData.id}
+                    classData={classData}
+                    onClick={handleClassClick}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            )}
 
         <ClassModal
           isOpen={modalOpen}
@@ -141,12 +148,12 @@ export default function ClassManagement() {
           classData={editingClass}
         />
       </div>
-      
+
       <ToastContainer
         toasts={toasts}
         onRemoveToast={removeToast}
       />
-      
+
       <Confirm
         isOpen={confirmState.isOpen}
         title={confirmState.title}
