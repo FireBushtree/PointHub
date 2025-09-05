@@ -4,6 +4,7 @@ import type { Class } from '../types'
 import { classApi } from '../services/tauriApi'
 import ClassCard from '../components/ClassCard'
 import ClassModal from '../components/ClassModal'
+import { ToastContainer, useToast } from '../components/Toast'
 
 export default function ClassManagement() {
   const navigate = useNavigate()
@@ -11,6 +12,7 @@ export default function ClassManagement() {
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingClass, setEditingClass] = useState<Class | null>(null)
+  const { toasts, showSuccess, showError, removeToast } = useToast()
 
   useEffect(() => {
     loadClasses()
@@ -52,7 +54,7 @@ export default function ClassManagement() {
       await loadClasses()
     } catch (error) {
       console.error('Failed to delete class:', error)
-      alert('删除失败，请重试')
+      showError('删除失败，请重试')
     }
   }
 
@@ -60,13 +62,16 @@ export default function ClassManagement() {
     try {
       if (editingClass) {
         await classApi.update(editingClass.id, data)
+        showSuccess('班级修改成功')
       } else {
         await classApi.create(data)
+        showSuccess('班级创建成功')
       }
       await loadClasses()
+      setModalOpen(false)
     } catch (error) {
       console.error('Failed to save class:', error)
-      alert('保存失败，请重试')
+      showError('保存失败，请重试')
     }
   }
 
@@ -135,6 +140,11 @@ export default function ClassManagement() {
           classData={editingClass}
         />
       </div>
+      
+      <ToastContainer
+        toasts={toasts}
+        onRemoveToast={removeToast}
+      />
     </div>
   )
 }

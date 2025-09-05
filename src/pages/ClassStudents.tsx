@@ -2,6 +2,7 @@ import type { Class, Student } from '../types'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import SimpleStudentModal from '../components/SimpleStudentModal'
+import { ToastContainer, useToast } from '../components/Toast'
 import { classApi, studentApi } from '../services/tauriApi'
 
 export default function ClassStudents() {
@@ -13,6 +14,7 @@ export default function ClassStudents() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingStudent, setEditingStudent] = useState<Student | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const { toasts, showSuccess, showError, removeToast } = useToast()
 
   const loadData = async () => {
     if (!classId)
@@ -69,7 +71,7 @@ export default function ClassStudents() {
     }
     catch (error) {
       console.error('Failed to delete student:', error)
-      alert('删除失败，请重试')
+      showError('删除失败，请重试')
     }
   }
 
@@ -83,15 +85,18 @@ export default function ClassStudents() {
 
       if (editingStudent) {
         await studentApi.update(editingStudent.id, studentData)
+        showSuccess('学生修改成功')
       }
       else {
         await studentApi.create(studentData)
+        showSuccess('学生创建成功')
       }
       await loadData()
+      setModalOpen(false)
     }
     catch (error) {
       console.error('Failed to save student:', error)
-      alert('保存失败，请重试')
+      showError('保存失败，请重试')
     }
   }
 
@@ -112,7 +117,7 @@ export default function ClassStudents() {
       setStudents(prev => prev.map(s =>
         s.id === student.id ? { ...s, points: student.points } : s,
       ))
-      alert('积分更新失败，请重试')
+      showError('积分更新失败，请重试')
     }
   }
 
@@ -332,6 +337,11 @@ export default function ClassStudents() {
           onClose={() => setModalOpen(false)}
           onSubmit={handleSubmit}
           studentData={editingStudent}
+        />
+
+        <ToastContainer
+          toasts={toasts}
+          onRemoveToast={removeToast}
         />
       </div>
     </div>
