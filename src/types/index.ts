@@ -12,4 +12,5 @@ export interface Student {
   points: number
   classId: string
   className: string
+  createdAt: string
 }

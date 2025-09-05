@@ -19,6 +19,7 @@ export default function ClassStudents() {
   const { toasts, showSuccess, showError, removeToast } = useToast()
   const { confirmState, showConfirm, handleConfirm, handleCancel } = useConfirm()
   const [importLoading, setImportLoading] = useState(false)
+  const [sortBy, setSortBy] = useState<'default' | 'points-asc' | 'points-desc'>('default')
 
   const loadData = async () => {
     if (!classId)
@@ -242,9 +243,27 @@ export default function ClassStudents() {
     }
   }
 
-  const filteredStudents = students.filter(student =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  const handleSortByPoints = () => {
+    if (sortBy === 'default') {
+      setSortBy('points-desc')
+    } else if (sortBy === 'points-desc') {
+      setSortBy('points-asc')
+    } else {
+      setSortBy('default')
+    }
+  }
+
+  const filteredStudents = students
+    .filter(student => student.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => {
+      if (sortBy === 'points-asc') {
+        return a.points - b.points
+      } else if (sortBy === 'points-desc') {
+        return b.points - a.points
+      }
+      // default: keep original order (by created_at desc from backend)
+      return 0
+    })
 
   if (loading) {
     return (
@@ -388,7 +407,27 @@ export default function ClassStudents() {
                           姓名
                         </th>
                         <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">
-                          积分
+                          <button
+                            onClick={handleSortByPoints}
+                            className="flex items-center space-x-2 hover:text-gray-700 transition-colors cursor-pointer"
+                          >
+                            <span>积分</span>
+                            {sortBy === 'points-desc' && (
+                              <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                              </svg>
+                            )}
+                            {sortBy === 'points-asc' && (
+                              <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                              </svg>
+                            )}
+                            {sortBy === 'default' && (
+                              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                              </svg>
+                            )}
+                          </button>
                         </th>
                         <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">
                           操作

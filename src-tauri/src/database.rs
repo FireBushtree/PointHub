@@ -49,9 +49,22 @@ impl Database {
                 points INTEGER NOT NULL DEFAULT 0,
                 class_id TEXT NOT NULL,
                 class_name TEXT NOT NULL,
+                created_at TEXT NOT NULL,
                 FOREIGN KEY(class_id) REFERENCES classes(id)
             )",
             [],
+        )?;
+        
+        // Add created_at column to existing students table if it doesn't exist
+        let _ = conn.execute(
+            "ALTER TABLE students ADD COLUMN created_at TEXT DEFAULT ''",
+            [],
+        );
+        
+        // Update any existing students without created_at
+        conn.execute(
+            "UPDATE students SET created_at = ? WHERE created_at = '' OR created_at IS NULL",
+            [&Utc::now().to_rfc3339()],
         )?;
         
         Ok(())
@@ -84,13 +97,14 @@ impl Database {
         // Insert sample student
         let student_id = Uuid::new_v4().to_string();
         conn.execute(
-            "INSERT INTO students (id, name, points, class_id, class_name) VALUES (?1, ?2, ?3, ?4, ?5)",
+            "INSERT INTO students (id, name, points, class_id, class_name, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
             params![
                 student_id,
                 "张三",
                 85,
                 class_id,
-                "计算机科学与技术2021级1班"
+                "计算机科学与技术2021级1班",
+                now
             ],
         )?;
         
@@ -210,15 +224,21 @@ impl Database {
     // Student CRUD operations
     pub fn get_all_students(&self) -> Result<Vec<Student>, Box<dyn std::error::Error>> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT id, name, points, class_id, class_name FROM students ORDER BY name")?;
+        let mut stmt = conn.prepare("SELECT id, name, points, class_id, class_name, created_at FROM students ORDER BY created_at DESC")?;
         
         let student_iter = stmt.query_map([], |row| {
+            let created_at_str: String = row.get(5)?;
+            let created_at = DateTime::parse_from_rfc3339(&created_at_str)
+                .map(|dt| dt.with_timezone(&Utc))
+                .unwrap_or_else(|_| Utc::now());
+                
             Ok(Student {
                 id: row.get(0)?,
                 name: row.get(1)?,
                 points: row.get(2)?,
                 class_id: row.get(3)?,
                 class_name: row.get(4)?,
+                created_at,
             })
         })?;
         
@@ -232,15 +252,21 @@ impl Database {
     
     pub fn get_students_by_class(&self, class_id: &str) -> Result<Vec<Student>, Box<dyn std::error::Error>> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT id, name, points, class_id, class_name FROM students WHERE class_id = ? ORDER BY name")?;
+        let mut stmt = conn.prepare("SELECT id, name, points, class_id, class_name, created_at FROM students WHERE class_id = ? ORDER BY created_at DESC")?;
         
         let student_iter = stmt.query_map([class_id], |row| {
+            let created_at_str: String = row.get(5)?;
+            let created_at = DateTime::parse_from_rfc3339(&created_at_str)
+                .map(|dt| dt.with_timezone(&Utc))
+                .unwrap_or_else(|_| Utc::now());
+                
             Ok(Student {
                 id: row.get(0)?,
                 name: row.get(1)?,
                 points: row.get(2)?,
                 class_id: row.get(3)?,
                 class_name: row.get(4)?,
+                created_at,
             })
         })?;
         
@@ -255,6 +281,8 @@ impl Database {
     pub fn create_student(&self, req: CreateStudentRequest) -> Result<Student, Box<dyn std::error::Error>> {
         let conn = self.conn.lock().unwrap();
         let id = Uuid::new_v4().to_string();
+        let created_at = Utc::now();
+        let created_at_str = created_at.to_rfc3339();
         
         // Get class name
         let class_name: String = conn.query_row(
@@ -264,8 +292,8 @@ impl Database {
         )?;
         
         conn.execute(
-            "INSERT INTO students (id, name, points, class_id, class_name) VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![id, req.name, req.points, req.class_id, class_name],
+            "INSERT INTO students (id, name, points, class_id, class_name, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![id, req.name, req.points, req.class_id, class_name, created_at_str],
         )?;
         
         // Update class student count
@@ -280,6 +308,7 @@ impl Database {
             points: req.points,
             class_id: req.class_id,
             class_name,
+            created_at,
         })
     }
     
@@ -288,14 +317,20 @@ impl Database {
         
         // Get current student info
         let current_student: Student = {
-            let mut stmt = conn.prepare("SELECT id, name, points, class_id, class_name FROM students WHERE id = ?")?;
+            let mut stmt = conn.prepare("SELECT id, name, points, class_id, class_name, created_at FROM students WHERE id = ?")?;
             stmt.query_row([id], |row| {
+                let created_at_str: String = row.get(5)?;
+                let created_at = DateTime::parse_from_rfc3339(&created_at_str)
+                    .map(|dt| dt.with_timezone(&Utc))
+                    .unwrap_or_else(|_| Utc::now());
+                    
                 Ok(Student {
                     id: row.get(0)?,
                     name: row.get(1)?,
                     points: row.get(2)?,
                     class_id: row.get(3)?,
                     class_name: row.get(4)?,
+                    created_at,
                 })
             })?
         };
@@ -361,14 +396,20 @@ impl Database {
         }
         
         // Get updated student
-        let mut stmt = conn.prepare("SELECT id, name, points, class_id, class_name FROM students WHERE id = ?")?;
+        let mut stmt = conn.prepare("SELECT id, name, points, class_id, class_name, created_at FROM students WHERE id = ?")?;
         let student = stmt.query_row([id], |row| {
+            let created_at_str: String = row.get(5)?;
+            let created_at = DateTime::parse_from_rfc3339(&created_at_str)
+                .map(|dt| dt.with_timezone(&Utc))
+                .unwrap_or_else(|_| Utc::now());
+                
             Ok(Student {
                 id: row.get(0)?,
                 name: row.get(1)?,
                 points: row.get(2)?,
                 class_id: row.get(3)?,
                 class_name: row.get(4)?,
+                created_at,
             })
         })?;
         

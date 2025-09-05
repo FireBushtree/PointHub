@@ -21,6 +21,8 @@ pub struct Student {
     pub class_id: String,
     #[serde(rename = "className")]
     pub class_name: String,
+    #[serde(rename = "createdAt")]
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
