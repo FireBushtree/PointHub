@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { Student, Class } from '../types'
-import { studentApi, classApi } from '../services/api'
+import { studentApi, classApi } from '../services/tauriApi'
 import SimpleStudentModal from '../components/SimpleStudentModal'
 
 export default function ClassStudents() {
@@ -26,7 +26,7 @@ export default function ClassStudents() {
     try {
       setLoading(true)
       const [studentsData, classesData] = await Promise.all([
-        studentApi.getAll(),
+        studentApi.getByClass(classId),
         classApi.getAll()
       ])
       
@@ -37,7 +37,7 @@ export default function ClassStudents() {
       }
       
       setClassInfo(currentClass)
-      setStudents(studentsData.filter(s => s.classId === classId))
+      setStudents(studentsData)
     } catch (error) {
       console.error('Failed to load data:', error)
     } finally {

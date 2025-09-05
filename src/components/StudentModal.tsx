@@ -1,6 +1,6 @@
 import type { Class, Student } from '../types'
 import { useEffect, useState } from 'react'
-import { classApi } from '../services/api'
+import { classApi } from '../services/tauriApi'
 
 interface StudentModalProps {
   isOpen: boolean

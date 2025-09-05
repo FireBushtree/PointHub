@@ -1,0 +1,50 @@
+use serde::{Deserialize, Serialize};
+use chrono::{DateTime, Utc};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Class {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    #[serde(rename = "studentCount")]
+    pub student_count: i32,
+    #[serde(rename = "createdAt")]
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Student {
+    pub id: String,
+    pub name: String,
+    pub points: i32,
+    #[serde(rename = "classId")]
+    pub class_id: String,
+    #[serde(rename = "className")]
+    pub class_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateClassRequest {
+    pub name: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateClassRequest {
+    pub name: Option<String>,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateStudentRequest {
+    pub name: String,
+    pub points: i32,
+    pub class_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateStudentRequest {
+    pub name: Option<String>,
+    pub points: Option<i32>,
+    pub class_id: Option<String>,
+}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Class } from '../types'
-import { classApi } from '../services/api'
+import { classApi } from '../services/tauriApi'
 import ClassCard from '../components/ClassCard'
 import ClassModal from '../components/ClassModal'
 
