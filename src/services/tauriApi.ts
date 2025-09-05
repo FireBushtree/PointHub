@@ -71,3 +71,13 @@ export const studentApi = {
     return await invoke('delete_student', { id })
   }
 }
+
+// File operations
+export const fileApi = {
+  async saveToDesktop(filename: string, data: Uint8Array): Promise<string> {
+    return await invoke('save_file_to_desktop', { 
+      filename, 
+      data: Array.from(data)
+    })
+  }
+}

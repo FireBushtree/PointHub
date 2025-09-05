@@ -24,7 +24,8 @@ pub fn run() {
             get_students_by_class,
             create_student,
             update_student,
-            delete_student
+            delete_student,
+            save_file_to_desktop
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

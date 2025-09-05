@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import SimpleStudentModal from '../components/SimpleStudentModal'
 import { ToastContainer, useToast } from '../components/Toast'
 import { Confirm, useConfirm } from '../components/Confirm'
-import { classApi, studentApi } from '../services/tauriApi'
+import { classApi, studentApi, fileApi } from '../services/tauriApi'
 import * as XLSX from 'xlsx'
 
 export default function ClassStudents() {
@@ -199,6 +199,49 @@ export default function ClassStudents() {
     }
   }
 
+  const handleExportExcel = async () => {
+    if (students.length === 0) {
+      showError('暂无学生数据可导出')
+      return
+    }
+
+    try {
+      // 准备导出数据
+      const exportData = [
+        ['学生姓名', '积分'], // 标题行
+        ...students.map(student => [student.name, student.points])
+      ]
+
+      // 创建工作簿
+      const worksheet = XLSX.utils.aoa_to_sheet(exportData)
+      const workbook = XLSX.utils.book_new()
+      
+      // 设置列宽
+      worksheet['!cols'] = [
+        { wch: 15 }, // 学生姓名列宽
+        { wch: 10 }  // 积分列宽
+      ]
+
+      // 添加工作表
+      XLSX.utils.book_append_sheet(workbook, worksheet, '学生列表')
+
+      // 生成文件名
+      const fileName = `${classInfo?.name || '班级'}_学生名单_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`
+      
+      // 生成二进制数据
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+      const uint8Array = new Uint8Array(excelBuffer)
+      
+      // 保存到桌面
+      const savedPath = await fileApi.saveToDesktop(fileName, uint8Array)
+      
+      showSuccess(`文件已保存到桌面: ${fileName}`)
+    } catch (error) {
+      console.error('Failed to export Excel:', error)
+      showError('导出失败，请重试')
+    }
+  }
+
   const filteredStudents = students.filter(student =>
     student.name.toLowerCase().includes(searchTerm.toLowerCase()),
   )
@@ -280,6 +323,16 @@ export default function ClassStudents() {
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
             </label>
+            
+            <button
+              onClick={handleExportExcel}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-1.5 text-sm cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 8l3 3m0 0l-3 3m3-3H9" />
+              </svg>
+              <span>导出Excel</span>
+            </button>
             
             <button
               onClick={handleCreate}

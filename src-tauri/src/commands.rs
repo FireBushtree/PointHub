@@ -1,6 +1,8 @@
 use tauri::State;
 use crate::database::Database;
 use crate::models::{Class, Student, CreateClassRequest, UpdateClassRequest, CreateStudentRequest, UpdateStudentRequest};
+use std::fs;
+use std::path::PathBuf;
 
 // Class commands
 #[tauri::command]
@@ -56,4 +58,24 @@ pub async fn update_student(database: State<'_, Database>, id: String, request: 
 pub async fn delete_student(database: State<'_, Database>, id: String) -> Result<(), String> {
     database.delete_student(&id)
         .map_err(|e| e.to_string())
+}
+
+// File operations
+#[tauri::command]
+pub async fn save_file_to_desktop(filename: String, data: Vec<u8>) -> Result<String, String> {
+    let mut desktop_path = PathBuf::new();
+    
+    // 获取桌面路径
+    if let Some(home_dir) = dirs::home_dir() {
+        desktop_path = home_dir.join("Desktop");
+    } else {
+        return Err("无法获取桌面路径".to_string());
+    }
+    
+    let file_path = desktop_path.join(filename);
+    
+    match fs::write(&file_path, data) {
+        Ok(_) => Ok(file_path.to_string_lossy().to_string()),
+        Err(e) => Err(format!("文件保存失败: {}", e))
+    }
 }
