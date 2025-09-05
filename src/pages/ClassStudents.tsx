@@ -5,6 +5,7 @@ import SimpleStudentModal from '../components/SimpleStudentModal'
 import { ToastContainer, useToast } from '../components/Toast'
 import { Confirm, useConfirm } from '../components/Confirm'
 import { classApi, studentApi } from '../services/tauriApi'
+import * as XLSX from 'xlsx'
 
 export default function ClassStudents() {
   const { classId } = useParams<{ classId: string }>()
@@ -17,6 +18,7 @@ export default function ClassStudents() {
   const [searchTerm, setSearchTerm] = useState('')
   const { toasts, showSuccess, showError, removeToast } = useToast()
   const { confirmState, showConfirm, handleConfirm, handleCancel } = useConfirm()
+  const [importLoading, setImportLoading] = useState(false)
 
   const loadData = async () => {
     if (!classId)
@@ -122,6 +124,81 @@ export default function ClassStudents() {
     }
   }
 
+  const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!file.name.match(/\.(xlsx|xls)$/i)) {
+      showError('请上传Excel文件(.xlsx 或 .xls)')
+      return
+    }
+
+    setImportLoading(true)
+    
+    try {
+      const reader = new FileReader()
+      reader.onload = async (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer)
+          const workbook = XLSX.read(data, { type: 'array' })
+          const sheetName = workbook.SheetNames[0]
+          const worksheet = workbook.Sheets[sheetName]
+          
+          // 转换为JSON，跳过第一行标题
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][]
+          
+          if (jsonData.length < 2) {
+            showError('Excel文件内容为空或格式错误')
+            setImportLoading(false)
+            return
+          }
+
+          // 从第二行开始处理数据
+          const studentsToImport = jsonData.slice(1).filter(row => row[0] && row[1] !== undefined).map(row => ({
+            name: String(row[0]).trim(),
+            points: Number(row[1]) || 0,
+            classId: classId!,
+            className: classInfo!.name
+          }))
+
+          if (studentsToImport.length === 0) {
+            showError('未找到有效的学生数据')
+            setImportLoading(false)
+            return
+          }
+
+          // 批量创建学生
+          let successCount = 0
+          for (const studentData of studentsToImport) {
+            try {
+              await studentApi.create(studentData)
+              successCount++
+            } catch (error) {
+              console.error(`Failed to create student ${studentData.name}:`, error)
+            }
+          }
+
+          await loadData()
+          showSuccess(`成功导入 ${successCount} 个学生`)
+          
+        } catch (error) {
+          console.error('Failed to parse Excel:', error)
+          showError('Excel文件解析失败，请检查文件格式')
+        } finally {
+          setImportLoading(false)
+          // 清空文件输入
+          event.target.value = ''
+        }
+      }
+      
+      reader.readAsArrayBuffer(file)
+    } catch (error) {
+      console.error('Failed to read file:', error)
+      showError('文件读取失败')
+      setImportLoading(false)
+    }
+  }
+
   const filteredStudents = students.filter(student =>
     student.name.toLowerCase().includes(searchTerm.toLowerCase()),
   )
@@ -189,15 +266,31 @@ export default function ClassStudents() {
             </div>
           </div>
 
-          <button
-            onClick={handleCreate}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-1.5 text-sm cursor-pointer"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            <span>添加学生</span>
-          </button>
+          <div className="flex items-center space-x-3">
+            <label className="relative bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-1.5 text-sm cursor-pointer">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+              </svg>
+              <span>{importLoading ? '导入中...' : '导入Excel'}</span>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImportExcel}
+                disabled={importLoading}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+              />
+            </label>
+            
+            <button
+              onClick={handleCreate}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-1.5 text-sm cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              <span>添加学生</span>
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
