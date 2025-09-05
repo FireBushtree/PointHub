@@ -5,6 +5,7 @@ import { classApi } from '../services/tauriApi'
 import ClassCard from '../components/ClassCard'
 import ClassModal from '../components/ClassModal'
 import { ToastContainer, useToast } from '../components/Toast'
+import { Confirm, useConfirm } from '../components/Confirm'
 
 export default function ClassManagement() {
   const navigate = useNavigate()
@@ -13,6 +14,7 @@ export default function ClassManagement() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingClass, setEditingClass] = useState<Class | null>(null)
   const { toasts, showSuccess, showError, removeToast } = useToast()
+  const { confirmState, showConfirm, handleConfirm, handleCancel } = useConfirm()
 
   useEffect(() => {
     loadClasses()
@@ -45,17 +47,16 @@ export default function ClassManagement() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('确定要删除这个班级吗？删除后该班级下的所有学生信息也将被删除。')) {
-      return
-    }
-
-    try {
-      await classApi.delete(id)
-      await loadClasses()
-    } catch (error) {
-      console.error('Failed to delete class:', error)
-      showError('删除失败，请重试')
-    }
+    showConfirm('确定要删除这个班级吗？删除后该班级下的所有学生信息也将被删除。', async () => {
+      try {
+        await classApi.delete(id)
+        await loadClasses()
+        showSuccess('班级删除成功')
+      } catch (error) {
+        console.error('Failed to delete class:', error)
+        showError('删除失败，请重试')
+      }
+    }, '删除确认')
   }
 
   const handleSubmit = async (data: Omit<Class, 'id' | 'createdAt' | 'studentCount'>) => {
@@ -144,6 +145,14 @@ export default function ClassManagement() {
       <ToastContainer
         toasts={toasts}
         onRemoveToast={removeToast}
+      />
+      
+      <Confirm
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
       />
     </div>
   )

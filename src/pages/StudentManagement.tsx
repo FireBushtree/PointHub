@@ -2,6 +2,7 @@ import type { Class, Student } from '../types'
 import { useEffect, useState } from 'react'
 import StudentModal from '../components/StudentModal'
 import { ToastContainer, useToast } from '../components/Toast'
+import { Confirm, useConfirm } from '../components/Confirm'
 import { classApi, studentApi } from '../services/api'
 
 export default function StudentManagement() {
@@ -13,6 +14,7 @@ export default function StudentManagement() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedClassId, setSelectedClassId] = useState('')
   const { toasts, showSuccess, showError, removeToast } = useToast()
+  const { confirmState, showConfirm, handleConfirm, handleCancel } = useConfirm()
 
   useEffect(() => {
     loadData()
@@ -47,18 +49,17 @@ export default function StudentManagement() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('确定要删除这个学生吗？')) {
-      return
-    }
-
-    try {
-      await studentApi.delete(id)
-      await loadData()
-    }
-    catch (error) {
-      console.error('Failed to delete student:', error)
-      showError('删除失败，请重试')
-    }
+    showConfirm('确定要删除这个学生吗？删除后将无法恢复。', async () => {
+      try {
+        await studentApi.delete(id)
+        await loadData()
+        showSuccess('学生删除成功')
+      }
+      catch (error) {
+        console.error('Failed to delete student:', error)
+        showError('删除失败，请重试')
+      }
+    }, '删除确认')
   }
 
   const handleSubmit = async (data: Omit<Student, 'id'>) => {
@@ -253,6 +254,14 @@ export default function StudentManagement() {
         <ToastContainer
           toasts={toasts}
           onRemoveToast={removeToast}
+        />
+        
+        <Confirm
+          isOpen={confirmState.isOpen}
+          title={confirmState.title}
+          message={confirmState.message}
+          onConfirm={handleConfirm}
+          onCancel={handleCancel}
         />
       </div>
     </div>
