@@ -16,6 +16,8 @@ pub struct Class {
 pub struct Student {
     pub id: String,
     pub name: String,
+    #[serde(rename = "studentNumber")]
+    pub student_number: String,
     pub points: i32,
     #[serde(rename = "classId")]
     pub class_id: String,
@@ -40,6 +42,7 @@ pub struct UpdateClassRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateStudentRequest {
     pub name: String,
+    pub student_number: String,
     pub points: i32,
     pub class_id: String,
 }
@@ -47,6 +50,7 @@ pub struct CreateStudentRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateStudentRequest {
     pub name: Option<String>,
+    pub student_number: Option<String>,
     pub points: Option<i32>,
     pub class_id: Option<String>,
 }

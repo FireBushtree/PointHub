@@ -47,6 +47,7 @@ export const studentApi = {
         name: studentData.name,
         points: studentData.points,
         class_id: studentData.classId,
+        student_number: studentData.studentNumber,
       },
     })
   },

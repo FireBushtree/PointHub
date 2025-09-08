@@ -79,7 +79,7 @@ export default function ClassStudents() {
     }, '删除确认')
   }
 
-  const handleSubmit = async (data: { name: string, points: number }) => {
+  const handleSubmit = async (data: { name: string, studentNumber: string, points: number }) => {
     try {
       const studentData = {
         ...data,
@@ -156,12 +156,13 @@ export default function ClassStudents() {
           }
 
           // 从第二行开始处理数据
-          const studentsToImport = jsonData.slice(1).filter(row => row[0]).map(row => ({
-            name: String(row[0]).trim(),
-            points: row[1] === undefined || row[1] === null || row[1] === '' ? 0 : (Number(row[1]) || 0),
+          const studentsToImport = jsonData.slice(1).filter(row => row[0] || row[1]).map(row => ({
+            name: String(row[1] || '').trim(),
+            studentNumber: String(row[0] || '').trim(),
+            points: row[2] === undefined || row[2] === null || row[2] === '' ? 0 : (Number(row[2]) || 0),
             classId: classId!,
             className: classInfo!.name,
-          }))
+          })).filter(student => student.name)
 
           if (studentsToImport.length === 0) {
             showError('未找到有效的学生数据')
@@ -213,8 +214,8 @@ export default function ClassStudents() {
     try {
       // 准备导出数据
       const exportData = [
-        ['学生姓名', '积分'], // 标题行
-        ...students.map(student => [student.name, student.points]),
+        ['学号', '学生姓名', '积分'], // 标题行
+        ...students.map(student => [student.studentNumber, student.name, student.points]),
       ]
 
       // 创建工作簿
@@ -223,6 +224,7 @@ export default function ClassStudents() {
 
       // 设置列宽
       worksheet['!cols'] = [
+        { wch: 12 }, // 学号列宽
         { wch: 15 }, // 学生姓名列宽
         { wch: 10 }, // 积分列宽
       ]
@@ -252,10 +254,10 @@ export default function ClassStudents() {
     try {
       // 创建模板数据
       const templateData = [
-        ['学生姓名', '积分'], // 标题行
-        ['张三', 85],
-        ['李四', 92],
-        ['王五', 78],
+        ['学号', '学生姓名', '积分'], // 标题行
+        ['2021001', '张三', 85],
+        ['2021002', '李四', 92],
+        ['2021003', '王五', 78],
       ]
 
       // 创建工作簿
@@ -264,6 +266,7 @@ export default function ClassStudents() {
 
       // 设置列宽
       worksheet['!cols'] = [
+        { wch: 12 }, // 学号列宽
         { wch: 15 }, // 学生姓名列宽
         { wch: 10 }, // 积分列宽
       ]
@@ -463,6 +466,9 @@ export default function ClassStudents() {
                           姓名
                         </th>
                         <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">
+                          学号
+                        </th>
+                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">
                           <button
                             onClick={handleSortByPoints}
                             className="flex items-center space-x-2 hover:text-gray-700 transition-colors cursor-pointer"
@@ -508,6 +514,11 @@ export default function ClassStudents() {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm text-gray-900">
+                              {student.studentNumber}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center space-x-3">
                               <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200">
                                 {student.points}
@@ -523,11 +534,11 @@ export default function ClassStudents() {
                                   <span className="text-xs font-medium">+1</span>
                                 </button>
                                 <button
-                                  onClick={() => handlePointsChange(student, 5)}
+                                  onClick={() => handlePointsChange(student, 2)}
                                   className="w-6 h-6 bg-green-100 hover:bg-green-200 text-green-600 rounded flex items-center justify-center transition-colors cursor-pointer"
-                                  title="加5分"
+                                  title="加2分"
                                 >
-                                  <span className="text-xs font-medium">+5</span>
+                                  <span className="text-xs font-medium">+2</span>
                                 </button>
                                 <button
                                   onClick={() => handlePointsChange(student, -1)}
@@ -537,11 +548,11 @@ export default function ClassStudents() {
                                   <span className="text-xs font-medium">-1</span>
                                 </button>
                                 <button
-                                  onClick={() => handlePointsChange(student, -5)}
+                                  onClick={() => handlePointsChange(student, -2)}
                                   className="w-6 h-6 bg-red-100 hover:bg-red-200 text-red-600 rounded flex items-center justify-center transition-colors cursor-pointer"
-                                  title="减5分"
+                                  title="减2分"
                                 >
-                                  <span className="text-xs font-medium">-5</span>
+                                  <span className="text-xs font-medium">-2</span>
                                 </button>
                               </div>
                             </div>

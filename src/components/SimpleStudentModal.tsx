@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react'
 interface SimpleStudentModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: { name: string, points: number }) => void
+  onSubmit: (data: { name: string, studentNumber: string, points: number }) => void
   studentData?: Student | null
 }
 
 export default function SimpleStudentModal({ isOpen, onClose, onSubmit, studentData }: SimpleStudentModalProps) {
   const [formData, setFormData] = useState({
     name: '',
+    studentNumber: '',
     points: 0,
   })
 
@@ -18,12 +19,14 @@ export default function SimpleStudentModal({ isOpen, onClose, onSubmit, studentD
     if (studentData) {
       setFormData({
         name: studentData.name,
+        studentNumber: studentData.studentNumber,
         points: studentData.points,
       })
     }
     else {
       setFormData({
         name: '',
+        studentNumber: '',
         points: 0,
       })
     }
@@ -31,11 +34,12 @@ export default function SimpleStudentModal({ isOpen, onClose, onSubmit, studentD
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.name.trim())
+    if (!formData.name.trim() || !formData.studentNumber.trim())
       return
 
     onSubmit({
       name: formData.name.trim(),
+      studentNumber: formData.studentNumber.trim(),
       points: formData.points,
     })
     onClose()
@@ -73,6 +77,20 @@ export default function SimpleStudentModal({ isOpen, onClose, onSubmit, studentD
               onChange={e => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
               placeholder="请输入学生姓名"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              学号 *
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.studentNumber}
+              onChange={e => setFormData({ ...formData, studentNumber: e.target.value })}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+              placeholder="请输入学号"
             />
           </div>
 
