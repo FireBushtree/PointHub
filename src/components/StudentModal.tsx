@@ -16,6 +16,7 @@ export default function StudentModal({ isOpen, onClose, onSubmit, studentData }:
     points: 0,
     classId: '',
     className: '',
+    studentNumber: '',
   })
 
   const loadClasses = async () => {
@@ -48,6 +49,7 @@ export default function StudentModal({ isOpen, onClose, onSubmit, studentData }:
         points: studentData.points,
         classId: studentData.classId,
         className: studentData.className,
+        studentNumber: studentData.studentNumber,
       })
     }
     else {
@@ -56,6 +58,7 @@ export default function StudentModal({ isOpen, onClose, onSubmit, studentData }:
         points: 0,
         classId: '',
         className: '',
+        studentNumber: '',
       })
     }
   }, [studentData, isOpen])
@@ -79,6 +82,7 @@ export default function StudentModal({ isOpen, onClose, onSubmit, studentData }:
       points: formData.points,
       classId: formData.classId,
       className: formData.className,
+      studentNumber: formData.studentNumber,
     })
     onClose()
   }
