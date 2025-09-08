@@ -238,7 +238,7 @@ impl Database {
     // Student CRUD operations
     pub fn get_all_students(&self) -> Result<Vec<Student>, Box<dyn std::error::Error>> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT id, name, student_number, points, class_id, class_name, created_at FROM students ORDER BY created_at DESC")?;
+        let mut stmt = conn.prepare("SELECT id, name, student_number, points, class_id, class_name, created_at FROM students ORDER BY CAST(student_number AS INTEGER) ASC")?;
 
         let student_iter = stmt.query_map([], |row| {
             let created_at_str: String = row.get(6)?;
@@ -267,7 +267,7 @@ impl Database {
 
     pub fn get_students_by_class(&self, class_id: &str) -> Result<Vec<Student>, Box<dyn std::error::Error>> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT id, name, student_number, points, class_id, class_name, created_at FROM students WHERE class_id = ? ORDER BY created_at DESC")?;
+        let mut stmt = conn.prepare("SELECT id, name, student_number, points, class_id, class_name, created_at FROM students WHERE class_id = ? ORDER BY CAST(student_number AS INTEGER) ASC")?;
 
         let student_iter = stmt.query_map([class_id], |row| {
             let created_at_str: String = row.get(6)?;

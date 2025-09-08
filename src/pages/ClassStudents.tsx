@@ -19,7 +19,7 @@ export default function ClassStudents() {
   const { toasts, showSuccess, showError, removeToast } = useToast()
   const { confirmState, showConfirm, handleConfirm, handleCancel } = useConfirm()
   const [importLoading, setImportLoading] = useState(false)
-  const [sortBy, setSortBy] = useState<'default' | 'points-asc' | 'points-desc'>('default')
+  const [sortBy, setSortBy] = useState<'student-number' | 'points-asc' | 'points-desc'>('student-number')
 
   const loadData = async () => {
     if (!classId)
@@ -255,9 +255,9 @@ export default function ClassStudents() {
       // 创建模板数据
       const templateData = [
         ['学号', '学生姓名', '积分'], // 标题行
-        ['2021001', '张三', 85],
-        ['2021002', '李四', 92],
-        ['2021003', '王五', 78],
+        ['1', '张三', 85],
+        ['2', '李四', 92],
+        ['3', '王五', 78],
       ]
 
       // 创建工作簿
@@ -290,14 +290,14 @@ export default function ClassStudents() {
   }
 
   const handleSortByPoints = () => {
-    if (sortBy === 'default') {
+    if (sortBy === 'student-number') {
       setSortBy('points-desc')
     }
     else if (sortBy === 'points-desc') {
       setSortBy('points-asc')
     }
     else {
-      setSortBy('default')
+      setSortBy('student-number')
     }
   }
 
@@ -310,7 +310,7 @@ export default function ClassStudents() {
       else if (sortBy === 'points-desc') {
         return b.points - a.points
       }
-      // created-time: keep original order (by created_at desc from backend)
+      // student-number: keep original order (by student_number asc from backend)
       return 0
     })
 
@@ -399,7 +399,7 @@ export default function ClassStudents() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <span>下载模板</span>
+              <span>下载导入模板</span>
             </button>
 
             <button
@@ -484,9 +484,9 @@ export default function ClassStudents() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
                               </svg>
                             )}
-                            {sortBy === 'default' && (
-                              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                            {sortBy === 'student-number' && (
+                              <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5T6.5 15a2.5 2.5 0 002.5-2.5V6.5z" />
                               </svg>
                             )}
                           </button>
