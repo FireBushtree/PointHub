@@ -307,7 +307,7 @@ export default function ClassStudents() {
       else if (sortBy === 'points-desc') {
         return b.points - a.points
       }
-      // default: keep original order (by created_at desc from backend)
+      // created-time: keep original order (by created_at desc from backend)
       return 0
     })
 
