@@ -463,11 +463,13 @@ export default function ClassStudents() {
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">
-                          姓名
-                        </th>
-                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">
                           学号
                         </th>
+
+                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">
+                          姓名
+                        </th>
+
                         <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">
                           <button
                             onClick={handleSortByPoints}
@@ -500,6 +502,12 @@ export default function ClassStudents() {
                       {filteredStudents.map(student => (
                         <tr key={student.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm text-gray-900">
+                              {student.studentNumber}
+                            </span>
+                          </td>
+
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                                 <span className="text-blue-600 font-medium text-sm">
@@ -513,11 +521,7 @@ export default function ClassStudents() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm text-gray-900">
-                              {student.studentNumber}
-                            </span>
-                          </td>
+
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center space-x-3">
                               <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200">
