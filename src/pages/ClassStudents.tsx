@@ -301,8 +301,35 @@ export default function ClassStudents() {
     }
   }
 
+  const rankColors = [
+    { bg: 'bg-gradient-to-br from-yellow-300 to-yellow-400', text: 'text-yellow-800', border: 'border-yellow-300' }, // 1st - Gold
+    { bg: 'bg-gradient-to-br from-gray-200 to-gray-300', text: 'text-gray-700', border: 'border-gray-300' }, // 2nd - Silver  
+    { bg: 'bg-gradient-to-br from-orange-300 to-orange-400', text: 'text-orange-800', border: 'border-orange-300' }, // 3rd - Bronze
+    { bg: 'bg-gradient-to-br from-purple-300 to-purple-400', text: 'text-purple-800', border: 'border-purple-300' }, // 4th - Purple
+    { bg: 'bg-gradient-to-br from-blue-300 to-blue-400', text: 'text-blue-800', border: 'border-blue-300' }, // 5th - Blue
+    { bg: 'bg-gradient-to-br from-green-300 to-green-400', text: 'text-green-800', border: 'border-green-300' }, // 6th - Green
+    { bg: 'bg-gradient-to-br from-red-300 to-red-400', text: 'text-red-800', border: 'border-red-300' }, // 7th - Red
+    { bg: 'bg-gradient-to-br from-pink-300 to-pink-400', text: 'text-pink-800', border: 'border-pink-300' }, // 8th - Pink
+    { bg: 'bg-gradient-to-br from-indigo-300 to-indigo-400', text: 'text-indigo-800', border: 'border-indigo-300' }, // 9th - Indigo
+    { bg: 'bg-gradient-to-br from-teal-300 to-teal-400', text: 'text-teal-800', border: 'border-teal-300' }, // 10th - Teal
+  ]
+
+  // Calculate ranks based on points, but keep original sorting logic
+  const rankedStudents = [...students]
+    .sort((a, b) => b.points - a.points) // Sort by points desc for ranking calculation only
+    .map((student, index) => ({
+      id: student.id,
+      rank: index < 10 ? index + 1 : null,
+    }))
+
+  const rankMap = new Map(rankedStudents.map(r => [r.id, r.rank]))
+
   const filteredStudents = students
     .filter(student => student.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .map(student => ({
+      ...student,
+      rank: rankMap.get(student.id),
+    }))
     .sort((a, b) => {
       if (sortBy === 'points-asc') {
         return a.points - b.points
@@ -489,8 +516,13 @@ export default function ClassStudents() {
                     {filteredStudents.map(student => (
                       <div
                         key={student.id}
-                        className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group"
+                        className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group relative"
                       >
+                        {student.rank && (
+                          <div className={`absolute -top-2 -right-2 w-8 h-8 rounded-full ${rankColors[student.rank - 1].bg} ${rankColors[student.rank - 1].text} flex items-center justify-center shadow-lg font-bold text-sm border-2 ${rankColors[student.rank - 1].border}`}>
+                            {student.rank}
+                          </div>
+                        )}
                         <div className="flex items-center space-x-4 mb-4">
                           <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-md">
                             <span className="text-white font-semibold text-lg">
