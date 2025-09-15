@@ -1,4 +1,5 @@
 use std::sync::Mutex;
+use std::path::PathBuf;
 use rusqlite::{Connection, Result as SqliteResult, params};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
@@ -12,10 +13,10 @@ pub struct Database {
 
 impl Database {
     pub fn new(app_handle: &AppHandle) -> Result<Self, Box<dyn std::error::Error>> {
-        let app_data_dir = app_handle.path().app_data_dir()?;
-        std::fs::create_dir_all(&app_data_dir)?;
+        let db_dir = Self::find_best_data_location(app_handle)?;
+        std::fs::create_dir_all(&db_dir)?;
 
-        let db_path = app_data_dir.join("pointhub.db");
+        let db_path = db_dir.join("pointhub.db");
         let conn = Connection::open(db_path)?;
 
         let database = Database {
@@ -26,6 +27,25 @@ impl Database {
         database.init_sample_data()?;
 
         Ok(database)
+    }
+
+    fn find_best_data_location(app_handle: &AppHandle) -> Result<PathBuf, Box<dyn std::error::Error>> {
+        let possible_dirs = vec![
+            PathBuf::from("D:\\PointHub"),
+            PathBuf::from("E:\\PointHub"),
+            PathBuf::from("F:\\PointHub"),
+            app_handle.path().app_data_dir()?,
+        ];
+
+        for dir in possible_dirs {
+            if let Some(parent) = dir.parent() {
+                if parent.exists() {
+                    return Ok(dir);
+                }
+            }
+        }
+
+        Ok(app_handle.path().app_data_dir()?)
     }
 
     fn init_tables(&self) -> SqliteResult<()> {
