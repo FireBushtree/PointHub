@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import { Confirm, useConfirm } from '../components/Confirm'
 import FallingAnimation from '../components/FallingAnimation'
+import RandomCallModal from '../components/RandomCallModal'
 import SimpleStudentModal from '../components/SimpleStudentModal'
 import { ToastContainer, useToast } from '../components/Toast'
 import { classApi, fileApi, studentApi } from '../services/tauriApi'
@@ -23,6 +24,7 @@ export default function ClassStudents() {
   const [sortBy, setSortBy] = useState<'student-number' | 'points-asc' | 'points-desc'>('student-number')
   const [animations, setAnimations] = useState<Record<string, { type: 'star' | 'mine', trigger: number }>>({})
   const [shakeCards, setShakeCards] = useState<Record<string, boolean>>({})
+  const [randomCallModalOpen, setRandomCallModalOpen] = useState(false)
 
   const loadData = async () => {
     if (!classId)
@@ -427,6 +429,17 @@ export default function ClassStudents() {
           </div>
 
           <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setRandomCallModalOpen(true)}
+              disabled={filteredStudents.length === 0}
+              className="bg-indigo-500 hover:bg-indigo-600 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-1.5 text-sm cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              <span>随机点名</span>
+            </button>
+
             <label className="relative bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-1.5 text-sm cursor-pointer">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
@@ -681,6 +694,12 @@ export default function ClassStudents() {
           message={confirmState.message}
           onConfirm={handleConfirm}
           onCancel={handleCancel}
+        />
+
+        <RandomCallModal
+          isOpen={randomCallModalOpen}
+          onClose={() => setRandomCallModalOpen(false)}
+          students={filteredStudents}
         />
 
         <style>{`
