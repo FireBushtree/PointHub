@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "pointhub",
+  "productName": "积分豆",
   "version": "0.1.0",
   "identifier": "com.firebushtree.pointhub",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "pointhub",
+        "title": "积分豆",
         "width": 800,
         "height": 600
       }

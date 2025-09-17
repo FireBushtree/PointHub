@@ -108,7 +108,7 @@ export default function ClassStudents() {
   }
 
   const handlePointsChange = async (student: Student, delta: number) => {
-    const newPoints = Math.max(0, student.points + delta)
+    const newPoints = student.points + delta
 
     // 只有加分时才触发扩散动画
     if (delta > 0) {
