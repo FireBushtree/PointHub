@@ -22,6 +22,7 @@ export default function ClassStudents() {
   const [importLoading, setImportLoading] = useState(false)
   const [sortBy, setSortBy] = useState<'student-number' | 'points-asc' | 'points-desc'>('student-number')
   const [animations, setAnimations] = useState<Record<string, { type: 'star' | 'mine', trigger: number }>>({})
+  const [shakeCards, setShakeCards] = useState<Record<string, boolean>>({})
 
   const loadData = async () => {
     if (!classId)
@@ -109,15 +110,24 @@ export default function ClassStudents() {
   const handlePointsChange = async (student: Student, delta: number) => {
     const newPoints = Math.max(0, student.points + delta)
 
-    // 触发动画
-    const animationType = delta > 0 ? 'star' : 'mine'
-    setAnimations(prev => ({
-      ...prev,
-      [student.id]: {
-        type: animationType,
-        trigger: Date.now(),
-      },
-    }))
+    // 只有加分时才触发扩散动画
+    if (delta > 0) {
+      setAnimations(prev => ({
+        ...prev,
+        [student.id]: {
+          type: 'star',
+          trigger: Date.now(),
+        },
+      }))
+    }
+
+    // 如果是减分，触发卡片震动
+    if (delta < 0) {
+      setShakeCards(prev => ({ ...prev, [student.id]: true }))
+      setTimeout(() => {
+        setShakeCards(prev => ({ ...prev, [student.id]: false }))
+      }, 600)
+    }
 
     // 立即更新前端状态
     setStudents(prev => prev.map(s =>
@@ -528,7 +538,9 @@ export default function ClassStudents() {
                     {filteredStudents.map(student => (
                       <div
                         key={student.id}
-                        className="bg-white border border-gray-200 rounded-xl px-3 py-4 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group relative"
+                        className={`bg-white border border-gray-200 rounded-xl px-3 py-4 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group relative ${
+                          shakeCards[student.id] ? 'animate-exploded-shake' : ''
+                        }`}
                       >
                         {animations[student.id] && (
                           <FallingAnimation
@@ -670,6 +682,53 @@ export default function ClassStudents() {
           onConfirm={handleConfirm}
           onCancel={handleCancel}
         />
+
+        <style>{`
+          @keyframes exploded-shake {
+            0%, 100% {
+              transform: translateX(0) translateY(0) rotate(0deg);
+            }
+            10% {
+              transform: translateX(-3px) translateY(-2px) rotate(-1deg);
+              filter: blur(0.5px);
+            }
+            20% {
+              transform: translateX(4px) translateY(1px) rotate(1deg);
+              filter: blur(0.3px);
+            }
+            30% {
+              transform: translateX(-2px) translateY(-3px) rotate(-0.5deg);
+              filter: blur(0.4px);
+            }
+            40% {
+              transform: translateX(3px) translateY(2px) rotate(0.8deg);
+              filter: blur(0.2px);
+            }
+            50% {
+              transform: translateX(-1px) translateY(-1px) rotate(-0.3deg);
+              filter: blur(0.3px);
+            }
+            60% {
+              transform: translateX(2px) translateY(1px) rotate(0.5deg);
+              filter: blur(0.1px);
+            }
+            70% {
+              transform: translateX(-1px) translateY(-2px) rotate(-0.2deg);
+              filter: blur(0.2px);
+            }
+            80% {
+              transform: translateX(1px) translateY(1px) rotate(0.2deg);
+              filter: blur(0.1px);
+            }
+            90% {
+              transform: translateX(-0.5px) translateY(-0.5px) rotate(-0.1deg);
+            }
+          }
+
+          .animate-exploded-shake {
+            animation: exploded-shake 0.6s ease-in-out;
+          }
+        `}</style>
 
       </div>
     </div>
