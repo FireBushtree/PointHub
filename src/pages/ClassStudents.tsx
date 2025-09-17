@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import { Confirm, useConfirm } from '../components/Confirm'
+import FallingAnimation from '../components/FallingAnimation'
 import SimpleStudentModal from '../components/SimpleStudentModal'
 import { ToastContainer, useToast } from '../components/Toast'
 import { classApi, fileApi, studentApi } from '../services/tauriApi'
@@ -20,6 +21,7 @@ export default function ClassStudents() {
   const { confirmState, showConfirm, handleConfirm, handleCancel } = useConfirm()
   const [importLoading, setImportLoading] = useState(false)
   const [sortBy, setSortBy] = useState<'student-number' | 'points-asc' | 'points-desc'>('student-number')
+  const [animations, setAnimations] = useState<Record<string, { type: 'star' | 'mine', trigger: number }>>({})
 
   const loadData = async () => {
     if (!classId)
@@ -106,6 +108,16 @@ export default function ClassStudents() {
 
   const handlePointsChange = async (student: Student, delta: number) => {
     const newPoints = Math.max(0, student.points + delta)
+
+    // 触发动画
+    const animationType = delta > 0 ? 'star' : 'mine'
+    setAnimations(prev => ({
+      ...prev,
+      [student.id]: {
+        type: animationType,
+        trigger: Date.now(),
+      },
+    }))
 
     // 立即更新前端状态
     setStudents(prev => prev.map(s =>
@@ -518,6 +530,13 @@ export default function ClassStudents() {
                         key={student.id}
                         className="bg-white border border-gray-200 rounded-xl px-3 py-4 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group relative"
                       >
+                        {animations[student.id] && (
+                          <FallingAnimation
+                            trigger={animations[student.id].trigger}
+                            type={animations[student.id].type}
+                            count={6}
+                          />
+                        )}
                         {student.rank && (
                           <div className={`absolute -top-2 -right-2 w-8 h-8 rounded-full ${rankColors[student.rank - 1].bg} ${rankColors[student.rank - 1].text} flex items-center justify-center shadow-lg font-bold text-sm border-2 ${rankColors[student.rank - 1].border}`}>
                             {student.rank}
