@@ -512,12 +512,11 @@ export default function ClassStudents() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 [2880px]:grid-cols-8 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 [2880px]:grid-cols-8 gap-3">
                     {filteredStudents.map(student => (
                       <div
                         key={student.id}
-                        className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group relative cursor-pointer"
-                        onClick={() => handleEdit(student)}
+                        className="bg-white border border-gray-200 rounded-xl px-3 py-4 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group relative"
                       >
                         {student.rank && (
                           <div className={`absolute -top-2 -right-2 w-8 h-8 rounded-full ${rankColors[student.rank - 1].bg} ${rankColors[student.rank - 1].text} flex items-center justify-center shadow-lg font-bold text-sm border-2 ${rankColors[student.rank - 1].border}`}>
@@ -531,69 +530,94 @@ export default function ClassStudents() {
                             </span>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-lg font-semibold text-gray-900 truncate">
-                              {student.name}
-                            </h3>
+                            <div className="flex items-center justify-between">
+                              <h3 className="text-lg font-semibold text-gray-900 truncate">
+                                {student.name}
+                              </h3>
+                              <div className="flex items-center space-x-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleEdit(student)
+                                  }}
+                                  className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                                  title="编辑学生"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleDelete(student.id)
+                                  }}
+                                  className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                                  title="删除学生"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center space-x-2">
-                            <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border border-blue-200">
-                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                              </svg>
-                              {student.points}
-                              {' '}
-                              分
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between space-x-2">
-                          <div className="flex items-center space-x-1">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handlePointsChange(student, 1)
-                              }}
-                              className="w-8 h-8 bg-green-50 hover:bg-green-100 text-green-600 rounded-lg flex items-center justify-center transition-colors shadow-sm hover:shadow-md"
-                              title="加1分"
-                            >
-                              <span className="text-sm font-semibold">+1</span>
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handlePointsChange(student, 2)
-                              }}
-                              className="w-8 h-8 bg-green-50 hover:bg-green-100 text-green-600 rounded-lg flex items-center justify-center transition-colors shadow-sm hover:shadow-md"
-                              title="加2分"
-                            >
-                              <span className="text-sm font-semibold">+2</span>
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handlePointsChange(student, -1)
-                              }}
-                              className="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg flex items-center justify-center transition-colors shadow-sm hover:shadow-md"
-                              title="减1分"
-                            >
-                              <span className="text-sm font-semibold">-1</span>
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handlePointsChange(student, -2)
-                              }}
-                              className="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg flex items-center justify-center transition-colors shadow-sm hover:shadow-md"
-                              title="减2分"
-                            >
-                              <span className="text-sm font-semibold">-2</span>
-                            </button>
+                        <div className="flex items-center justify-between">
+                          <div className="relative flex items-center justify-center">
+                            <svg className="w-18 h-18 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                            </svg>
+                            <span className="absolute text-lg font-bold text-white">{student.points}</span>
                           </div>
 
+                          <div className="flex flex-col space-y-2">
+                            <div className="flex items-center space-x-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handlePointsChange(student, 1)
+                                }}
+                                className="w-8 h-8 bg-green-50 hover:bg-green-100 text-green-600 rounded-lg flex items-center justify-center transition-colors shadow-sm hover:shadow-md cursor-pointer"
+                                title="加1分"
+                              >
+                                <span className="text-sm font-semibold">+1</span>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handlePointsChange(student, 2)
+                                }}
+                                className="w-8 h-8 bg-green-50 hover:bg-green-100 text-green-600 rounded-lg flex items-center justify-center transition-colors shadow-sm hover:shadow-md cursor-pointer"
+                                title="加2分"
+                              >
+                                <span className="text-sm font-semibold">+2</span>
+                              </button>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handlePointsChange(student, -1)
+                                }}
+                                className="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg flex items-center justify-center transition-colors shadow-sm hover:shadow-md cursor-pointer"
+                                title="减1分"
+                              >
+                                <span className="text-sm font-semibold">-1</span>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handlePointsChange(student, -5)
+                                }}
+                                className="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg flex items-center justify-center transition-colors shadow-sm hover:shadow-md cursor-pointer"
+                                title="减5分"
+                              >
+                                <span className="text-sm font-semibold">-5</span>
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -606,10 +630,12 @@ export default function ClassStudents() {
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
           onSubmit={handleSubmit}
-          onDelete={editingStudent ? () => {
-            setModalOpen(false)
-            handleDelete(editingStudent.id)
-          } : undefined}
+          onDelete={editingStudent
+            ? () => {
+                setModalOpen(false)
+                handleDelete(editingStudent.id)
+              }
+            : undefined}
           studentData={editingStudent}
         />
 
