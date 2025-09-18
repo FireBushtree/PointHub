@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use tauri::{AppHandle, Manager};
 
-use crate::models::{Class, Student, CreateClassRequest, UpdateClassRequest, CreateStudentRequest, UpdateStudentRequest};
+use crate::models::{Class, Student, CreateClassRequest, UpdateClassRequest, CreateStudentRequest, UpdateStudentRequest, Product, CreateProductRequest, UpdateProductRequest};
 
 pub struct Database {
     pub conn: Mutex<Connection>,
@@ -97,6 +97,20 @@ impl Database {
         // Update any existing students without student_number (generate default)
         conn.execute(
             "UPDATE students SET student_number = 'STU' || substr(id, 1, 8) WHERE student_number = '' OR student_number IS NULL",
+            [],
+        )?;
+
+        // Create products table
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS products (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                points INTEGER NOT NULL,
+                stock INTEGER NOT NULL,
+                class_id TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(class_id) REFERENCES classes(id)
+            )",
             [],
         )?;
 
@@ -482,6 +496,116 @@ impl Database {
             params![class_id, class_id],
         )?;
 
+        Ok(())
+    }
+
+    // Product CRUD operations
+    pub fn get_products_by_class(&self, class_id: &str) -> Result<Vec<Product>, Box<dyn std::error::Error>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT id, name, points, stock, class_id, created_at FROM products WHERE class_id = ? ORDER BY created_at DESC")?;
+
+        let product_iter = stmt.query_map([class_id], |row| {
+            let created_at_str: String = row.get(5)?;
+            let created_at = DateTime::parse_from_rfc3339(&created_at_str)
+                .map(|dt| dt.with_timezone(&Utc))
+                .unwrap_or_else(|_| Utc::now());
+
+            Ok(Product {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                points: row.get(2)?,
+                stock: row.get(3)?,
+                class_id: row.get(4)?,
+                created_at,
+            })
+        })?;
+
+        let mut products = Vec::new();
+        for product in product_iter {
+            products.push(product?);
+        }
+
+        Ok(products)
+    }
+
+    pub fn create_product(&self, req: CreateProductRequest) -> Result<Product, Box<dyn std::error::Error>> {
+        let conn = self.conn.lock().unwrap();
+        let id = Uuid::new_v4().to_string();
+        let created_at = Utc::now();
+        let created_at_str = created_at.to_rfc3339();
+
+        conn.execute(
+            "INSERT INTO products (id, name, points, stock, class_id, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![id, req.name, req.points, req.stock, req.class_id, created_at_str],
+        )?;
+
+        Ok(Product {
+            id,
+            name: req.name,
+            points: req.points,
+            stock: req.stock,
+            class_id: req.class_id,
+            created_at,
+        })
+    }
+
+    pub fn update_product(&self, id: &str, req: UpdateProductRequest) -> Result<Product, Box<dyn std::error::Error>> {
+        let conn = self.conn.lock().unwrap();
+
+        let mut has_updates = false;
+
+        if let Some(name) = &req.name {
+            conn.execute(
+                "UPDATE products SET name = ? WHERE id = ?",
+                params![name, id],
+            )?;
+            has_updates = true;
+        }
+
+        if let Some(points) = req.points {
+            conn.execute(
+                "UPDATE products SET points = ? WHERE id = ?",
+                params![points, id],
+            )?;
+            has_updates = true;
+        }
+
+        if let Some(stock) = req.stock {
+            conn.execute(
+                "UPDATE products SET stock = ? WHERE id = ?",
+                params![stock, id],
+            )?;
+            has_updates = true;
+        }
+
+        if !has_updates {
+            return Err("No fields to update".into());
+        }
+
+        // Get updated product
+        let mut stmt = conn.prepare("SELECT id, name, points, stock, class_id, created_at FROM products WHERE id = ?")?;
+        let product = stmt.query_row([id], |row| {
+            let created_at_str: String = row.get(5)?;
+            let created_at = DateTime::parse_from_rfc3339(&created_at_str)
+                .map(|dt| dt.with_timezone(&Utc))
+                .unwrap_or_else(|_| Utc::now());
+
+            Ok(Product {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                points: row.get(2)?,
+                stock: row.get(3)?,
+                class_id: row.get(4)?,
+                created_at,
+            })
+        })?;
+
+        Ok(product)
+    }
+
+    pub fn delete_product(&self, id: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM products WHERE id = ?", [id])?;
         Ok(())
     }
 }

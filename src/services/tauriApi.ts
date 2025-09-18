@@ -1,4 +1,4 @@
-import type { Class, Student } from '../types'
+import type { Class, Product, Student } from '../types'
 import { invoke } from '@tauri-apps/api/core'
 
 // Class API
@@ -70,6 +70,44 @@ export const studentApi = {
 
   async delete(id: string): Promise<void> {
     return await invoke('delete_student', { id })
+  },
+}
+
+// Product API
+export const productApi = {
+  async getByClass(classId: string): Promise<Product[]> {
+    return await invoke('get_products_by_class', { classId })
+  },
+
+  async create(productData: Omit<Product, 'id' | 'createdAt'>): Promise<Product> {
+    return await invoke('create_product', {
+      request: {
+        name: productData.name,
+        points: productData.points,
+        stock: productData.stock,
+        class_id: productData.classId,
+      },
+    })
+  },
+
+  async update(id: string, productData: Partial<Omit<Product, 'id' | 'classId' | 'createdAt'>>): Promise<Product> {
+    const request: any = {}
+
+    if (productData.name !== undefined) {
+      request.name = productData.name
+    }
+    if (productData.points !== undefined) {
+      request.points = productData.points
+    }
+    if (productData.stock !== undefined) {
+      request.stock = productData.stock
+    }
+
+    return await invoke('update_product', { id, request })
+  },
+
+  async delete(id: string): Promise<void> {
+    return await invoke('delete_product', { id })
   },
 }
 

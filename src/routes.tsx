@@ -1,16 +1,21 @@
 import type { RouteObject } from 'react-router-dom'
 import { createBrowserRouter } from 'react-router-dom'
-import Home from './Home'
+import ClassManagement from './pages/ClassManagement'
 import ClassStudents from './pages/ClassStudents'
+import ClassProducts from './pages/ClassProducts'
 
 const routes: RouteObject[] = [
   {
     path: '/',
-    element: <Home />,
+    element: <ClassManagement />,
   },
   {
-    path: '/class/:classId',
+    path: '/class/:classId/students',
     element: <ClassStudents />,
+  },
+  {
+    path: '/class/:classId/products',
+    element: <ClassProducts />,
   },
 ]
 

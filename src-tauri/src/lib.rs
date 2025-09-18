@@ -25,6 +25,10 @@ pub fn run() {
             create_student,
             update_student,
             delete_student,
+            get_products_by_class,
+            create_product,
+            update_product,
+            delete_product,
             save_file_to_desktop
         ])
         .run(tauri::generate_context!())

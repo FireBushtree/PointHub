@@ -35,7 +35,7 @@ export default function ClassManagement() {
   }, [])
 
   const handleClassClick = (classId: string) => {
-    navigate(`/class/${classId}`)
+    navigate(`/class/${classId}/students`)
   }
 
   const handleCreate = () => {

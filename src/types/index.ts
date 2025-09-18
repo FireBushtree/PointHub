@@ -15,3 +15,12 @@ export interface Student {
   className: string
   createdAt: string
 }
+
+export interface Product {
+  id: string
+  name: string
+  points: number
+  stock: number
+  classId: string
+  createdAt: string
+}
