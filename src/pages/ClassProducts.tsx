@@ -1,9 +1,10 @@
 import type { Class, Product } from '../types'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import * as XLSX from 'xlsx'
 import { Confirm, useConfirm } from '../components/Confirm'
 import { ToastContainer, useToast } from '../components/Toast'
-import { classApi, productApi } from '../services/tauriApi'
+import { classApi, fileApi, productApi } from '../services/tauriApi'
 
 interface ProductModalProps {
   isOpen: boolean
@@ -132,6 +133,7 @@ export default function ClassProducts() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [importLoading, setImportLoading] = useState(false)
   const { toasts, showSuccess, showError, removeToast } = useToast()
   const { confirmState, showConfirm, handleConfirm, handleCancel } = useConfirm()
 
@@ -217,6 +219,124 @@ export default function ClassProducts() {
     }
   }
 
+  const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file)
+      return
+
+    if (!file.name.match(/\.(xlsx|xls)$/i)) {
+      showError('请上传Excel文件(.xlsx 或 .xls)')
+      return
+    }
+
+    setImportLoading(true)
+
+    try {
+      const reader = new FileReader()
+      reader.onload = async (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer)
+          const workbook = XLSX.read(data, { type: 'array' })
+          const sheetName = workbook.SheetNames[0]
+          const worksheet = workbook.Sheets[sheetName]
+
+          // 转换为JSON，跳过第一行标题
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][]
+
+          if (jsonData.length < 2) {
+            showError('Excel文件内容为空或格式错误')
+            setImportLoading(false)
+            return
+          }
+
+          // 从第二行开始处理数据
+          const productsToImport = jsonData.slice(1).filter(row => row[0]).map(row => ({
+            name: String(row[0] || '').trim(),
+            points: row[1] === undefined || row[1] === null || row[1] === '' ? 0 : (Number(row[1]) || 0),
+            stock: row[2] === undefined || row[2] === null || row[2] === '' ? 0 : (Number(row[2]) || 0),
+            classId: classId!,
+          })).filter(product => product.name)
+
+          if (productsToImport.length === 0) {
+            showError('未找到有效的商品数据')
+            setImportLoading(false)
+            return
+          }
+
+          // 批量创建商品
+          let successCount = 0
+          for (const productData of productsToImport) {
+            try {
+              await productApi.create(productData)
+              successCount++
+            }
+            catch (error) {
+              console.error(`Failed to create product ${productData.name}:`, error)
+            }
+          }
+
+          await loadData()
+          showSuccess(`成功导入 ${successCount} 个商品`)
+        }
+        catch (error) {
+          console.error('Failed to parse Excel:', error)
+          showError('Excel文件解析失败，请检查文件格式')
+        }
+        finally {
+          setImportLoading(false)
+          // 清空文件输入
+          event.target.value = ''
+        }
+      }
+
+      reader.readAsArrayBuffer(file)
+    }
+    catch (error) {
+      console.error('Failed to read file:', error)
+      showError('文件读取失败')
+      setImportLoading(false)
+    }
+  }
+
+  const handleDownloadTemplate = async () => {
+    try {
+      // 创建模板数据
+      const templateData = [
+        ['商品名称', '所需积分', '库存数量'], // 标题行
+        ['文具套装', 50, 10],
+        ['课外书籍', 30, 15],
+        ['体育用品', 80, 5],
+      ]
+
+      // 创建工作簿
+      const worksheet = XLSX.utils.aoa_to_sheet(templateData)
+      const workbook = XLSX.utils.book_new()
+
+      // 设置列宽
+      worksheet['!cols'] = [
+        { wch: 15 }, // 商品名称列宽
+        { wch: 12 }, // 所需积分列宽
+        { wch: 12 }, // 库存数量列宽
+      ]
+
+      // 添加工作表
+      XLSX.utils.book_append_sheet(workbook, worksheet, '商品导入模板')
+
+      // 生成二进制数据
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+      const uint8Array = new Uint8Array(excelBuffer)
+
+      // 保存到桌面
+      await fileApi.saveToDesktop('商品导入模板.xlsx', uint8Array)
+
+      showSuccess('模板已下载到桌面: 商品导入模板.xlsx')
+    }
+    catch (error) {
+      console.error('Failed to download template:', error)
+      showError('模板下载失败，请重试')
+    }
+  }
+
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()),
   )
@@ -284,15 +404,41 @@ export default function ClassProducts() {
             </div>
           </div>
 
-          <button
-            onClick={handleCreate}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-1.5 text-sm"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            <span>添加商品</span>
-          </button>
+          <div className="flex items-center space-x-3">
+            <label className="relative bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-1.5 text-sm cursor-pointer">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+              </svg>
+              <span>{importLoading ? '导入中...' : '导入Excel'}</span>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImportExcel}
+                disabled={importLoading}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+              />
+            </label>
+
+            <button
+              onClick={handleDownloadTemplate}
+              className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-1.5 text-sm cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span>下载导入模板</span>
+            </button>
+
+            <button
+              onClick={handleCreate}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-1.5 text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              <span>添加商品</span>
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
@@ -329,69 +475,78 @@ export default function ClassProducts() {
                 </div>
               )
             : (
-                <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {filteredProducts.map(product => (
-                      <div
-                        key={product.id}
-                        className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-lg hover:border-blue-200 transition-all duration-200"
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <h3 className="text-lg font-semibold text-gray-900 truncate flex-1">
-                            {product.name}
-                          </h3>
-                          <div className="flex items-center space-x-1 ml-2">
-                            <button
-                              onClick={() => handleEdit(product)}
-                              className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                              title="编辑商品"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => handleDelete(product.id)}
-                              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                              title="删除商品"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">所需积分</span>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          商品名称
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          所需积分
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          库存
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          状态
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          操作
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredProducts.map(product => (
+                        <tr key={product.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center space-x-1">
                               <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                               </svg>
-                              <span className="font-semibold text-amber-600">{product.points}</span>
+                              <span className="text-sm font-semibold text-amber-600">{product.points}</span>
                             </div>
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">库存</span>
-                            <span className={`font-semibold ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`text-sm font-semibold ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
                               {product.stock}
                             </span>
-                          </div>
-                        </div>
-
-                        <div className={`mt-3 px-3 py-1 rounded-full text-xs font-medium text-center ${
-                          product.stock > 0
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                        >
-                          {product.stock > 0 ? '有库存' : '缺货'}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              product.stock > 0
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}
+                            >
+                              {product.stock > 0 ? '有库存' : '缺货'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex items-center justify-end space-x-2">
+                              <button
+                                onClick={() => handleEdit(product)}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="编辑商品"
+                              >
+                                编辑
+                              </button>
+                              <button
+                                onClick={() => handleDelete(product.id)}
+                                className="text-red-600 hover:text-red-900"
+                                title="删除商品"
+                              >
+                                删除
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
         </div>

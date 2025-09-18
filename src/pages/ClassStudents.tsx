@@ -395,8 +395,8 @@ export default function ClassStudents() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center space-x-4">
+        <div className="max-w-7xl mx-auto px-4 py-6 flex items-center">
+          <div className="flex-1 flex items-center space-x-4">
             <button
               onClick={() => navigate('/')}
               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -410,6 +410,16 @@ export default function ClassStudents() {
               <p className="text-gray-600">班级学生管理</p>
             </div>
           </div>
+
+          <button
+            onClick={() => navigate(`/class/${classId}/products`)}
+            className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-1.5 text-sm cursor-pointer"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.1 5H17M9 19.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM20.5 19.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+            </svg>
+            <span>商城设置</span>
+          </button>
         </div>
       </div>
 
@@ -429,16 +439,6 @@ export default function ClassStudents() {
           </div>
 
           <div className="flex items-center space-x-3">
-            <button
-              onClick={() => navigate(`/class/${classId}/products`)}
-              className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-1.5 text-sm cursor-pointer"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.1 5H17M9 19.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM20.5 19.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-              </svg>
-              <span>商城设置</span>
-            </button>
-
             <button
               onClick={() => setRandomCallModalOpen(true)}
               disabled={filteredStudents.length === 0}
@@ -712,7 +712,8 @@ export default function ClassStudents() {
           students={filteredStudents}
         />
 
-        <style>{`
+        <style>
+          {`
           @keyframes exploded-shake {
             0%, 100% {
               transform: translateX(0) translateY(0) rotate(0deg);
@@ -757,7 +758,8 @@ export default function ClassStudents() {
           .animate-exploded-shake {
             animation: exploded-shake 0.6s ease-in-out;
           }
-        `}</style>
+        `}
+        </style>
 
       </div>
     </div>
