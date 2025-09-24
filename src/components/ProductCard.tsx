@@ -4,9 +4,10 @@ interface ProductCardProps {
   product: Product
   onEdit?: (product: Product) => void
   onDelete?: (id: string) => void
+  onExchange?: (product: Product) => void
 }
 
-export default function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
+export default function ProductCard({ product, onEdit, onDelete, onExchange }: ProductCardProps) {
   const isOutOfStock = product.stock === 0
   const isLowStock = product.stock > 0 && product.stock <= 5
 
@@ -87,6 +88,7 @@ export default function ProductCard({ product, onEdit, onDelete }: ProductCardPr
 
         {/* 购买/兑换按钮 */}
         <button
+          onClick={() => onExchange && onExchange(product)}
           className={`w-full py-3 px-6 rounded-xl font-bold text-sm shadow-lg ${
             isOutOfStock
               ? 'bg-gray-200 text-gray-500 cursor-not-allowed'

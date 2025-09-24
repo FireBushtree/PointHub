@@ -1,6 +1,7 @@
 import type { Product } from '../types'
 import { useEffect, useState } from 'react'
 import ProductCard from './ProductCard'
+import ExchangeModal from './ExchangeModal'
 import { productApi } from '../services/tauriApi'
 import { useToast } from './Toast'
 
@@ -12,24 +13,48 @@ interface ClassShopProps {
 export default function ClassShop({ classId, className }: ClassShopProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
-  const { showError } = useToast()
+  const [exchangeModal, setExchangeModal] = useState<{ isOpen: boolean; product: Product | null }>({
+    isOpen: false,
+    product: null
+  })
+  const { showError, showSuccess } = useToast()
 
-  const loadProducts = async () => {
+  const loadData = async () => {
     try {
       setLoading(true)
-      const data = await productApi.getByClass(classId)
-      setProducts(data)
+      const productsData = await productApi.getByClass(classId)
+      setProducts(productsData)
     } catch (error) {
-      console.error('Failed to load products:', error)
-      showError('加载商品失败，请重试')
+      console.error('Failed to load data:', error)
+      showError('加载数据失败，请重试')
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    loadProducts()
+    loadData()
   }, [classId])
+
+  const handleExchange = (product: Product) => {
+    setExchangeModal({ isOpen: true, product })
+  }
+
+  const handleExchangeConfirm = async (studentId: string, productId: string) => {
+    try {
+      // 这里需要实现兑换逻辑 - 扣减学生积分和商品库存
+      // 暂时模拟成功
+      showSuccess('兑换成功！')
+      await loadData() // 重新加载数据
+    } catch (error) {
+      console.error('Exchange failed:', error)
+      showError('兑换失败，请重试')
+    }
+  }
+
+  const closeExchangeModal = () => {
+    setExchangeModal({ isOpen: false, product: null })
+  }
 
   const totalProducts = products.length
   const inStockProducts = products.filter(p => p.stock > 0).length
@@ -168,11 +193,20 @@ export default function ClassShop({ classId, className }: ClassShopProps) {
                 <ProductCard
                   key={product.id}
                   product={product}
+                  onExchange={handleExchange}
                 />
               ))}
             </div>
           </>
         )}
+
+        <ExchangeModal
+          isOpen={exchangeModal.isOpen}
+          onClose={closeExchangeModal}
+          product={exchangeModal.product}
+          classId={classId}
+          onExchange={handleExchangeConfirm}
+        />
       </div>
     </div>
   )
