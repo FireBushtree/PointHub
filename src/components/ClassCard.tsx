@@ -5,9 +5,10 @@ interface ClassCardProps {
   onClick: (classId: string) => void
   onEdit: (classData: Class) => void
   onDelete: (id: string) => void
+  onShopClick?: (classId: string) => void
 }
 
-export default function ClassCard({ classData, onClick, onEdit, onDelete }: ClassCardProps) {
+export default function ClassCard({ classData, onClick, onEdit, onDelete, onShopClick }: ClassCardProps) {
   const handleCardClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button')) {
       return
@@ -27,6 +28,20 @@ export default function ClassCard({ classData, onClick, onEdit, onDelete }: Clas
           )}
         </div>
         <div className="flex space-x-2">
+          {onShopClick && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onShopClick(classData.id)
+              }}
+              className="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-lg transition-colors"
+              title="查看商城"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+            </button>
+          )}
           <button
             onClick={(e) => {
               e.stopPropagation()

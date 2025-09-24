@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ClassCard from '../components/ClassCard'
 import ClassModal from '../components/ClassModal'
+import ClassShop from '../components/ClassShop'
 import { Confirm, useConfirm } from '../components/Confirm'
 import { ToastContainer, useToast } from '../components/Toast'
 import { classApi } from '../services/tauriApi'
@@ -13,6 +14,7 @@ export default function ClassManagement() {
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingClass, setEditingClass] = useState<Class | null>(null)
+  const [selectedClass, setSelectedClass] = useState<Class | null>(null)
   const { toasts, showSuccess, showError, removeToast } = useToast()
   const { confirmState, showConfirm, handleConfirm, handleCancel } = useConfirm()
 
@@ -81,6 +83,13 @@ export default function ClassManagement() {
     }
   }
 
+  const handleShopClick = (classId: string) => {
+    const classData = classes.find(c => c.id === classId)
+    if (classData) {
+      setSelectedClass(classData)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -88,6 +97,33 @@ export default function ClassManagement() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
           <p className="mt-4 text-gray-600">加载中...</p>
         </div>
+      </div>
+    )
+  }
+
+  if (selectedClass) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="mb-6">
+            <button
+              onClick={() => setSelectedClass(null)}
+              className="flex items-center text-blue-600 hover:text-blue-700 font-medium"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              返回班级管理
+            </button>
+          </div>
+
+          <ClassShop classId={selectedClass.id} className={selectedClass.name} />
+        </div>
+
+        <ToastContainer
+          toasts={toasts}
+          onRemoveToast={removeToast}
+        />
       </div>
     )
   }
@@ -136,6 +172,7 @@ export default function ClassManagement() {
                     onClick={handleClassClick}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
+                    onShopClick={handleShopClick}
                   />
                 ))}
               </div>
