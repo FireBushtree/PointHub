@@ -1,4 +1,4 @@
-import type { Class, Product, PurchaseRecord, Student } from '../types'
+import type { Class, Product, PurchaseRecord, PaginatedPurchaseRecords, Student } from '../types'
 import { invoke } from '@tauri-apps/api/core'
 
 // Class API
@@ -125,6 +125,14 @@ export const purchaseApi = {
 
   async getByClass(classId: string): Promise<PurchaseRecord[]> {
     return await invoke('get_purchase_records_by_class', { classId })
+  },
+
+  async getByClassPaginated(classId: string, page: number, pageSize: number): Promise<PaginatedPurchaseRecords> {
+    return await invoke('get_purchase_records_paginated', {
+      classId,
+      page,
+      pageSize
+    })
   },
 
   async updateShippingStatus(recordId: string, status: 'pending' | 'shipped' | 'delivered'): Promise<void> {

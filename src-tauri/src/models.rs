@@ -114,3 +114,15 @@ pub struct CreatePurchaseRequest {
 pub struct UpdateShippingStatusRequest {
     pub shipping_status: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaginatedPurchaseRecords {
+    pub records: Vec<PurchaseRecord>,
+    pub total: i64,
+    #[serde(rename = "totalPages")]
+    pub total_pages: i64,
+    #[serde(rename = "currentPage")]
+    pub current_page: i64,
+    #[serde(rename = "pageSize")]
+    pub page_size: i64,
+}

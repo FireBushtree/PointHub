@@ -47,3 +47,11 @@ export interface PurchaseRecord {
   createdAt: string
   shippingStatus: 'pending' | 'shipped' | 'delivered'
 }
+
+export interface PaginatedPurchaseRecords {
+  records: PurchaseRecord[]
+  total: number
+  totalPages: number
+  currentPage: number
+  pageSize: number
+}

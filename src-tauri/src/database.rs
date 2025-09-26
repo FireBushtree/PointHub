@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use tauri::{AppHandle, Manager};
 
-use crate::models::{Class, Student, CreateClassRequest, UpdateClassRequest, CreateStudentRequest, UpdateStudentRequest, Product, CreateProductRequest, UpdateProductRequest, PurchaseRecord, CreatePurchaseRequest};
+use crate::models::{Class, Student, CreateClassRequest, UpdateClassRequest, CreateStudentRequest, UpdateStudentRequest, Product, CreateProductRequest, UpdateProductRequest, PurchaseRecord, CreatePurchaseRequest, PaginatedPurchaseRecords};
 
 pub struct Database {
     pub conn: Mutex<Connection>,
@@ -762,6 +762,60 @@ impl Database {
         }
 
         Ok(result)
+    }
+
+    pub fn get_purchase_records_paginated(&self, class_id: &str, page: i64, page_size: i64) -> Result<PaginatedPurchaseRecords, Box<dyn std::error::Error>> {
+        let conn = self.conn.lock().unwrap();
+
+        // 获取总记录数
+        let total: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM purchase_records WHERE class_id = ?",
+            [class_id],
+            |row| row.get(0),
+        )?;
+
+        // 计算总页数
+        let total_pages = (total + page_size - 1) / page_size;
+
+        // 计算偏移量
+        let offset = (page - 1) * page_size;
+
+        // 分页查询数据
+        let mut stmt = conn.prepare(
+            "SELECT id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at, shipping_status
+             FROM purchase_records
+             WHERE class_id = ?
+             ORDER BY created_at DESC
+             LIMIT ? OFFSET ?"
+        )?;
+
+        let records = stmt.query_map(params![class_id, page_size, offset], |row| {
+            Ok(PurchaseRecord {
+                id: row.get(0)?,
+                product_id: row.get(1)?,
+                product_name: row.get(2)?,
+                points: row.get(3)?,
+                student_id: row.get(4)?,
+                student_name: row.get(5)?,
+                quantity: row.get(6)?,
+                class_id: row.get(7)?,
+                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?).map_err(|_| rusqlite::Error::InvalidColumnType(8, "datetime".to_string(), rusqlite::types::Type::Text))?.with_timezone(&Utc),
+                shipping_status: row.get(9)?,
+            })
+        })?;
+
+        let mut result = Vec::new();
+        for record in records {
+            result.push(record?);
+        }
+
+        Ok(PaginatedPurchaseRecords {
+            records: result,
+            total,
+            total_pages,
+            current_page: page,
+            page_size,
+        })
     }
 
     pub fn update_shipping_status(&self, record_id: &str, status: &str) -> Result<(), Box<dyn std::error::Error>> {

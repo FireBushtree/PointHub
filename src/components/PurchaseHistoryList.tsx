@@ -1,8 +1,9 @@
-import type { PurchaseRecord } from '../types'
+import type { PaginatedPurchaseRecords, PurchaseRecord } from '../types'
 import { CheckCircle2, Package, Truck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { purchaseApi } from '../services/tauriApi'
 import { useToast } from './Toast'
+import Pagination from './Pagination'
 
 interface PurchaseHistoryListProps {
   classId: string
@@ -11,16 +12,25 @@ interface PurchaseHistoryListProps {
 }
 
 export default function PurchaseHistoryList({ classId, className, onBackToShop }: PurchaseHistoryListProps) {
-  const [records, setRecords] = useState<PurchaseRecord[]>([])
+  const [paginatedData, setPaginatedData] = useState<PaginatedPurchaseRecords>({
+    records: [],
+    total: 0,
+    totalPages: 0,
+    currentPage: 1,
+    pageSize: 10
+  })
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize] = useState(10) // 每页显示10条记录
   const { showError, showSuccess } = useToast()
 
-  const loadRecords = async () => {
+  const loadRecords = async (page: number = currentPage) => {
     try {
       setLoading(true)
-      const data = await purchaseApi.getByClass(classId)
-      setRecords(data)
+      const data = await purchaseApi.getByClassPaginated(classId, page, pageSize)
+      setPaginatedData(data)
+      setCurrentPage(page)
     }
     catch (error) {
       console.error('Failed to load purchase records:', error)
@@ -33,9 +43,14 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
 
   useEffect(() => {
     if (classId) {
-      loadRecords()
+      loadRecords(1) // 重新加载时回到第一页
+      setCurrentPage(1)
     }
   }, [classId])
+
+  const handlePageChange = (page: number) => {
+    loadRecords(page)
+  }
 
   const getStatusText = (status: string) => {
     switch (status) {
@@ -139,14 +154,14 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
               <div className="bg-white/20 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
                 📦 总计
                 {' '}
-                {records.length}
+                {paginatedData.total}
                 {' '}
                 条记录
               </div>
               <div className="bg-orange-400/80 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
                 ⏳ 待发货
                 {' '}
-                {records.filter(r => r.shippingStatus === 'pending').length}
+                {paginatedData.records.filter(r => r.shippingStatus === 'pending').length}
                 {' '}
                 条
               </div>
@@ -163,7 +178,7 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
 
       {/* 购物记录表格 */}
       <div className="px-4 pb-8">
-        {records.length === 0
+        {paginatedData.total === 0
           ? (
               <div className="bg-white rounded-2xl shadow-xl p-12 text-center mx-auto max-w-md">
                 <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -203,7 +218,7 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {records.map((record, index) => (
+                      {paginatedData.records.map((record, index) => (
                         <tr key={record.id} className={`hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
@@ -296,6 +311,16 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
                     </tbody>
                   </table>
                 </div>
+
+                {/* 分页组件 */}
+                <Pagination
+                  currentPage={paginatedData.currentPage}
+                  totalPages={paginatedData.totalPages}
+                  pageSize={paginatedData.pageSize}
+                  total={paginatedData.total}
+                  onPageChange={handlePageChange}
+                  loading={loading}
+                />
               </div>
             )}
       </div>
