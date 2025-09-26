@@ -29,7 +29,9 @@ pub fn run() {
             create_product,
             update_product,
             delete_product,
-            save_file_to_desktop
+            save_file_to_desktop,
+            create_purchase_record,
+            get_purchase_records_by_class
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

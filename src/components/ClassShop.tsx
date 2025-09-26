@@ -1,7 +1,6 @@
-import type { CartItem, Product } from '../types'
+import type { Product } from '../types'
 import { useEffect, useState } from 'react'
 import { productApi } from '../services/tauriApi'
-import CartSummary from './CartSummary'
 import ExchangeModal from './ExchangeModal'
 import ProductCard from './ProductCard'
 import { useToast } from './Toast'
@@ -14,12 +13,11 @@ interface ClassShopProps {
 export default function ClassShop({ classId, className }: ClassShopProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
-  const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [exchangeModal, setExchangeModal] = useState<{ isOpen: boolean, product: Product | null }>({
     isOpen: false,
     product: null,
   })
-  const { showError, showSuccess } = useToast()
+  const { showError } = useToast()
 
   const loadData = async () => {
     try {
@@ -40,67 +38,12 @@ export default function ClassShop({ classId, className }: ClassShopProps) {
     loadData()
   }, [classId])
 
-  const handleAddToCart = (product: Product) => {
+  const handlePurchase = (product: Product) => {
     setExchangeModal({ isOpen: true, product })
   }
 
-  const handleAddToCartConfirm = async (studentId: string, product: Product) => {
-    try {
-      // 生成购物车项ID
-      const cartItemId = `${studentId}-${product.id}-${Date.now()}`
-
-      // 查找学生信息（这里应该从API获取，暂时模拟）
-      const studentName = `学生${studentId.slice(0, 8)}`
-
-      // 检查是否已存在相同的购物车项
-      const existingItemIndex = cartItems.findIndex(
-        item => item.productId === product.id && item.studentId === studentId,
-      )
-
-      if (existingItemIndex >= 0) {
-        // 增加数量
-        const newCartItems = [...cartItems]
-        newCartItems[existingItemIndex].quantity += 1
-        setCartItems(newCartItems)
-      }
-      else {
-        // 添加新项
-        const newCartItem: CartItem = {
-          id: cartItemId,
-          productId: product.id,
-          productName: product.name,
-          points: product.points,
-          studentId,
-          studentName,
-          quantity: 1,
-        }
-        setCartItems([...cartItems, newCartItem])
-      }
-
-      showSuccess('已添加到购物车！')
-    }
-    catch (error) {
-      console.error('Add to cart failed:', error)
-      showError('添加失败，请重试')
-    }
-  }
-
-  const handleRemoveFromCart = (itemId: string) => {
-    setCartItems(cartItems.filter(item => item.id !== itemId))
-    showSuccess('已从购物车移除')
-  }
-
-  const handleCheckout = async () => {
-    try {
-      // 这里实现批量兑换逻辑
-      showSuccess(`成功兑换 ${cartItems.length} 件商品！`)
-      setCartItems([]) // 清空购物车
-      await loadData() // 重新加载数据
-    }
-    catch (error) {
-      console.error('Checkout failed:', error)
-      showError('批量兑换失败，请重试')
-    }
+  const handlePurchaseSuccess = async () => {
+    await loadData() // 重新加载数据刷新库存和学生积分
   }
 
   const closeExchangeModal = () => {
@@ -230,7 +173,7 @@ export default function ClassShop({ classId, className }: ClassShopProps) {
                     <ProductCard
                       key={product.id}
                       product={product}
-                      onExchange={handleAddToCart}
+                      onExchange={handlePurchase}
                     />
                   ))}
                 </div>
@@ -242,13 +185,7 @@ export default function ClassShop({ classId, className }: ClassShopProps) {
           onClose={closeExchangeModal}
           product={exchangeModal.product}
           classId={classId}
-          onAddToCart={handleAddToCartConfirm}
-        />
-
-        <CartSummary
-          cartItems={cartItems}
-          onRemoveItem={handleRemoveFromCart}
-          onCheckout={handleCheckout}
+          onPurchaseSuccess={handlePurchaseSuccess}
         />
       </div>
     </div>

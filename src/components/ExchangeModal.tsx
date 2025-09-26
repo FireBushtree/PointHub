@@ -1,20 +1,22 @@
-import type { Product, Student, CartItem } from '../types'
+import type { Product, Student } from '../types'
 import { useEffect, useState } from 'react'
-import { studentApi } from '../services/tauriApi'
+import { studentApi, purchaseApi } from '../services/tauriApi'
+import { useToast } from './Toast'
 
 interface ExchangeModalProps {
   isOpen: boolean
   onClose: () => void
   product: Product | null
   classId: string
-  onAddToCart: (studentId: string, product: Product) => void
+  onPurchaseSuccess: () => void
 }
 
-export default function ExchangeModal({ isOpen, onClose, product, classId, onAddToCart }: ExchangeModalProps) {
+export default function ExchangeModal({ isOpen, onClose, product, classId, onPurchaseSuccess }: ExchangeModalProps) {
   const [selectedStudentId, setSelectedStudentId] = useState('')
   const [loading, setLoading] = useState(false)
   const [students, setStudents] = useState<Student[]>([])
   const [studentsLoading, setStudentsLoading] = useState(false)
+  const { showError, showSuccess } = useToast()
 
   const loadStudents = async () => {
     if (!classId)
@@ -59,18 +61,21 @@ export default function ExchangeModal({ isOpen, onClose, product, classId, onAdd
   const selectedStudent = students.find(s => s.id === selectedStudentId)
   const canAfford = selectedStudent ? selectedStudent.points >= product.points : false
 
-  const handleAddToCart = async () => {
-    if (!selectedStudentId || !canAfford)
+  const handlePurchase = async () => {
+    if (!selectedStudentId || !canAfford || !product)
       return
 
     setLoading(true)
     try {
-      onAddToCart(selectedStudentId, product)
+      await purchaseApi.create(product.id, selectedStudentId, 1)
+      showSuccess(`${selectedStudent?.name} 成功购买了 ${product.name}！`)
+      onPurchaseSuccess()
       onClose()
       setSelectedStudentId('')
     }
     catch (error) {
-      console.error('Add to cart failed:', error)
+      console.error('Purchase failed:', error)
+      showError(`购买失败：${error}`)
     }
     finally {
       setLoading(false)
@@ -88,7 +93,7 @@ export default function ExchangeModal({ isOpen, onClose, product, classId, onAdd
         {/* 头部 */}
         <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold">添加到购物车</h2>
+            <h2 className="text-xl font-bold">确认购买</h2>
             <button
               onClick={handleClose}
               className="p-2 hover:bg-white/20 rounded-full transition-colors"
@@ -176,7 +181,7 @@ export default function ExchangeModal({ isOpen, onClose, product, classId, onAdd
                         积分
                       </div>
                       <div className="text-gray-500">
-                        兑换后剩余:
+                        购买后剩余:
                         {selectedStudent.points - product.points}
                       </div>
                     </div>
@@ -196,7 +201,7 @@ export default function ExchangeModal({ isOpen, onClose, product, classId, onAdd
             取消
           </button>
           <button
-            onClick={handleAddToCart}
+            onClick={handlePurchase}
             disabled={!canAfford || !selectedStudentId || loading}
             className={`flex-1 px-4 py-3 rounded-lg font-bold transition-colors ${
               canAfford && selectedStudentId && !loading
@@ -204,7 +209,7 @@ export default function ExchangeModal({ isOpen, onClose, product, classId, onAdd
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
-            {loading ? '添加中...' : '添加到购物车'}
+            {loading ? '购买中...' : '确认购买'}
           </button>
         </div>
       </div>

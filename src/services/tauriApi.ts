@@ -1,4 +1,4 @@
-import type { Class, Product, Student } from '../types'
+import type { Class, Product, PurchaseRecord, Student } from '../types'
 import { invoke } from '@tauri-apps/api/core'
 
 // Class API
@@ -108,6 +108,23 @@ export const productApi = {
 
   async delete(id: string): Promise<void> {
     return await invoke('delete_product', { id })
+  },
+}
+
+// Purchase record API
+export const purchaseApi = {
+  async create(productId: string, studentId: string, quantity: number = 1): Promise<PurchaseRecord> {
+    return await invoke('create_purchase_record', {
+      request: {
+        product_id: productId,
+        student_id: studentId,
+        quantity,
+      },
+    })
+  },
+
+  async getByClass(classId: string): Promise<PurchaseRecord[]> {
+    return await invoke('get_purchase_records_by_class', { classId })
   },
 }
 

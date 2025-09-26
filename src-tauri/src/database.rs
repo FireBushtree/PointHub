@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use tauri::{AppHandle, Manager};
 
-use crate::models::{Class, Student, CreateClassRequest, UpdateClassRequest, CreateStudentRequest, UpdateStudentRequest, Product, CreateProductRequest, UpdateProductRequest};
+use crate::models::{Class, Student, CreateClassRequest, UpdateClassRequest, CreateStudentRequest, UpdateStudentRequest, Product, CreateProductRequest, UpdateProductRequest, PurchaseRecord, CreatePurchaseRequest};
 
 pub struct Database {
     pub conn: Mutex<Connection>,
@@ -109,6 +109,25 @@ impl Database {
                 stock INTEGER NOT NULL,
                 class_id TEXT NOT NULL,
                 created_at TEXT NOT NULL,
+                FOREIGN KEY(class_id) REFERENCES classes(id)
+            )",
+            [],
+        )?;
+
+        // Create purchase_records table
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS purchase_records (
+                id TEXT PRIMARY KEY,
+                product_id TEXT NOT NULL,
+                product_name TEXT NOT NULL,
+                points INTEGER NOT NULL,
+                student_id TEXT NOT NULL,
+                student_name TEXT NOT NULL,
+                quantity INTEGER NOT NULL,
+                class_id TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(product_id) REFERENCES products(id),
+                FOREIGN KEY(student_id) REFERENCES students(id),
                 FOREIGN KEY(class_id) REFERENCES classes(id)
             )",
             [],
@@ -607,5 +626,131 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         conn.execute("DELETE FROM products WHERE id = ?", [id])?;
         Ok(())
+    }
+
+    // Purchase records methods
+    pub fn create_purchase_record(&self, req: CreatePurchaseRequest) -> Result<PurchaseRecord, Box<dyn std::error::Error>> {
+        let conn = self.conn.lock().unwrap();
+
+        // Start transaction
+        conn.execute("BEGIN TRANSACTION", [])?;
+
+        // Get product and student info
+        let product: Product = conn.query_row(
+            "SELECT id, name, points, stock, class_id, created_at FROM products WHERE id = ?",
+            [&req.product_id],
+            |row| {
+                Ok(Product {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    points: row.get(2)?,
+                    stock: row.get(3)?,
+                    class_id: row.get(4)?,
+                    created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(5)?).map_err(|_| rusqlite::Error::InvalidColumnType(5, "datetime".to_string(), rusqlite::types::Type::Text))?.with_timezone(&Utc),
+                })
+            },
+        )?;
+
+        let student: Student = conn.query_row(
+            "SELECT id, name, student_number, points, class_id, class_name, created_at FROM students WHERE id = ?",
+            [&req.student_id],
+            |row| {
+                Ok(Student {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    student_number: row.get(2)?,
+                    points: row.get(3)?,
+                    class_id: row.get(4)?,
+                    class_name: row.get(5)?,
+                    created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(6)?).map_err(|_| rusqlite::Error::InvalidColumnType(6, "datetime".to_string(), rusqlite::types::Type::Text))?.with_timezone(&Utc),
+                })
+            },
+        )?;
+
+        // Check if product has enough stock
+        if product.stock < req.quantity {
+            conn.execute("ROLLBACK", [])?;
+            return Err("库存不足".into());
+        }
+
+        let total_points = product.points * req.quantity;
+
+        // Check if student has enough points
+        if student.points < total_points {
+            conn.execute("ROLLBACK", [])?;
+            return Err("积分不足".into());
+        }
+
+        // Create purchase record
+        let id = Uuid::new_v4().to_string();
+        let created_at = Utc::now();
+
+        conn.execute(
+            "INSERT INTO purchase_records (id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            params![
+                &id,
+                &product.id,
+                &product.name,
+                &total_points,
+                &student.id,
+                &student.name,
+                &req.quantity,
+                &product.class_id,
+                &created_at.to_rfc3339()
+            ],
+        )?;
+
+        // Update student points
+        conn.execute(
+            "UPDATE students SET points = points - ? WHERE id = ?",
+            params![&total_points, &student.id],
+        )?;
+
+        // Update product stock
+        conn.execute(
+            "UPDATE products SET stock = stock - ? WHERE id = ?",
+            params![&req.quantity, &product.id],
+        )?;
+
+        // Commit transaction
+        conn.execute("COMMIT", [])?;
+
+        Ok(PurchaseRecord {
+            id,
+            product_id: product.id,
+            product_name: product.name,
+            points: total_points,
+            student_id: student.id,
+            student_name: student.name,
+            quantity: req.quantity,
+            class_id: product.class_id,
+            created_at,
+        })
+    }
+
+    pub fn get_purchase_records_by_class(&self, class_id: &str) -> Result<Vec<PurchaseRecord>, Box<dyn std::error::Error>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at FROM purchase_records WHERE class_id = ? ORDER BY created_at DESC")?;
+
+        let records = stmt.query_map([class_id], |row| {
+            Ok(PurchaseRecord {
+                id: row.get(0)?,
+                product_id: row.get(1)?,
+                product_name: row.get(2)?,
+                points: row.get(3)?,
+                student_id: row.get(4)?,
+                student_name: row.get(5)?,
+                quantity: row.get(6)?,
+                class_id: row.get(7)?,
+                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?).map_err(|_| rusqlite::Error::InvalidColumnType(8, "datetime".to_string(), rusqlite::types::Type::Text))?.with_timezone(&Utc),
+            })
+        })?;
+
+        let mut result = Vec::new();
+        for record in records {
+            result.push(record?);
+        }
+
+        Ok(result)
     }
 }

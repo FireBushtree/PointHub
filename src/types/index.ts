@@ -34,3 +34,15 @@ export interface CartItem {
   studentName: string
   quantity: number
 }
+
+export interface PurchaseRecord {
+  id: string
+  productId: string
+  productName: string
+  points: number
+  studentId: string
+  studentName: string
+  quantity: number
+  classId: string
+  createdAt: string
+}

@@ -81,3 +81,29 @@ pub struct UpdateProductRequest {
     pub points: Option<i32>,
     pub stock: Option<i32>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PurchaseRecord {
+    pub id: String,
+    #[serde(rename = "productId")]
+    pub product_id: String,
+    #[serde(rename = "productName")]
+    pub product_name: String,
+    pub points: i32,
+    #[serde(rename = "studentId")]
+    pub student_id: String,
+    #[serde(rename = "studentName")]
+    pub student_name: String,
+    pub quantity: i32,
+    #[serde(rename = "classId")]
+    pub class_id: String,
+    #[serde(rename = "createdAt")]
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreatePurchaseRequest {
+    pub product_id: String,
+    pub student_id: String,
+    pub quantity: i32,
+}
