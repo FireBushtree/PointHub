@@ -31,7 +31,8 @@ pub fn run() {
             delete_product,
             save_file_to_desktop,
             create_purchase_record,
-            get_purchase_records_by_class
+            get_purchase_records_by_class,
+            update_shipping_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

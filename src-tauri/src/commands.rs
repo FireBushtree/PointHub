@@ -1,6 +1,6 @@
 use tauri::State;
 use crate::database::Database;
-use crate::models::{Class, Student, CreateClassRequest, UpdateClassRequest, CreateStudentRequest, UpdateStudentRequest, Product, CreateProductRequest, UpdateProductRequest, PurchaseRecord, CreatePurchaseRequest};
+use crate::models::{Class, Student, CreateClassRequest, UpdateClassRequest, CreateStudentRequest, UpdateStudentRequest, Product, CreateProductRequest, UpdateProductRequest, PurchaseRecord, CreatePurchaseRequest, UpdateShippingStatusRequest};
 use std::fs;
 
 // Class commands
@@ -112,5 +112,11 @@ pub async fn create_purchase_record(database: State<'_, Database>, request: Crea
 #[tauri::command]
 pub async fn get_purchase_records_by_class(database: State<'_, Database>, class_id: String) -> Result<Vec<PurchaseRecord>, String> {
     database.get_purchase_records_by_class(&class_id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn update_shipping_status(database: State<'_, Database>, record_id: String, request: UpdateShippingStatusRequest) -> Result<(), String> {
+    database.update_shipping_status(&record_id, &request.shipping_status)
         .map_err(|e| e.to_string())
 }

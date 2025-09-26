@@ -126,6 +126,15 @@ export const purchaseApi = {
   async getByClass(classId: string): Promise<PurchaseRecord[]> {
     return await invoke('get_purchase_records_by_class', { classId })
   },
+
+  async updateShippingStatus(recordId: string, status: 'pending' | 'shipped' | 'delivered'): Promise<void> {
+    return await invoke('update_shipping_status', {
+      recordId,
+      request: {
+        shipping_status: status,
+      },
+    })
+  },
 }
 
 // File operations

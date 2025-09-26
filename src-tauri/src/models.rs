@@ -99,6 +99,8 @@ pub struct PurchaseRecord {
     pub class_id: String,
     #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
+    #[serde(rename = "shippingStatus")]
+    pub shipping_status: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -106,4 +108,9 @@ pub struct CreatePurchaseRequest {
     pub product_id: String,
     pub student_id: String,
     pub quantity: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateShippingStatusRequest {
+    pub shipping_status: String,
 }

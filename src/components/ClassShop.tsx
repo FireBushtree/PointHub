@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { productApi } from '../services/tauriApi'
 import ExchangeModal from './ExchangeModal'
 import ProductCard from './ProductCard'
+import PurchaseHistoryList from './PurchaseHistoryList'
 import { useToast } from './Toast'
 
 interface ClassShopProps {
@@ -13,6 +14,7 @@ interface ClassShopProps {
 export default function ClassShop({ classId, className }: ClassShopProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentView, setCurrentView] = useState<'shop' | 'history'>('shop')
   const [exchangeModal, setExchangeModal] = useState<{ isOpen: boolean, product: Product | null }>({
     isOpen: false,
     product: null,
@@ -51,6 +53,17 @@ export default function ClassShop({ classId, className }: ClassShopProps) {
   }
 
   const totalProducts = products.length
+
+  // 如果是购物记录视图，直接显示购物记录组件
+  if (currentView === 'history') {
+    return (
+      <PurchaseHistoryList
+        classId={classId}
+        className={className}
+        onBackToShop={() => setCurrentView('shop')}
+      />
+    )
+  }
 
   if (loading) {
     return (
@@ -104,13 +117,16 @@ export default function ClassShop({ classId, className }: ClassShopProps) {
               <p className="text-xl font-light text-white/90 mb-6">{className}</p>
             </div>
 
-            {/* 促销标签 */}
-            <div className="hidden md:flex flex-col space-y-2">
+            {/* 导航按钮 */}
+            <div className="flex flex-col space-y-2">
+              <button
+                onClick={() => setCurrentView('history')}
+                className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg transition-all duration-200 hover:scale-105"
+              >
+                📋 购物记录
+              </button>
               <div className="bg-yellow-400 text-yellow-900 px-4 py-2 rounded-full text-sm font-bold shadow-lg">
                 🔥 热销中
-              </div>
-              <div className="bg-green-400 text-green-900 px-4 py-2 rounded-full text-sm font-bold shadow-lg">
-                ✨ 品质保证
               </div>
             </div>
           </div>

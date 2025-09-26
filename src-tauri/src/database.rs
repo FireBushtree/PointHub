@@ -126,12 +126,19 @@ impl Database {
                 quantity INTEGER NOT NULL,
                 class_id TEXT NOT NULL,
                 created_at TEXT NOT NULL,
+                shipping_status TEXT NOT NULL DEFAULT 'pending',
                 FOREIGN KEY(product_id) REFERENCES products(id),
                 FOREIGN KEY(student_id) REFERENCES students(id),
                 FOREIGN KEY(class_id) REFERENCES classes(id)
             )",
             [],
         )?;
+
+        // Add shipping_status column to existing purchase_records table if it doesn't exist
+        let _ = conn.execute(
+            "ALTER TABLE purchase_records ADD COLUMN shipping_status TEXT DEFAULT 'pending'",
+            [],
+        );
 
         Ok(())
     }
@@ -686,7 +693,7 @@ impl Database {
         let created_at = Utc::now();
 
         conn.execute(
-            "INSERT INTO purchase_records (id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO purchase_records (id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at, shipping_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             params![
                 &id,
                 &product.id,
@@ -696,7 +703,8 @@ impl Database {
                 &student.name,
                 &req.quantity,
                 &product.class_id,
-                &created_at.to_rfc3339()
+                &created_at.to_rfc3339(),
+                "pending"
             ],
         )?;
 
@@ -725,12 +733,13 @@ impl Database {
             quantity: req.quantity,
             class_id: product.class_id,
             created_at,
+            shipping_status: "pending".to_string(),
         })
     }
 
     pub fn get_purchase_records_by_class(&self, class_id: &str) -> Result<Vec<PurchaseRecord>, Box<dyn std::error::Error>> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at FROM purchase_records WHERE class_id = ? ORDER BY created_at DESC")?;
+        let mut stmt = conn.prepare("SELECT id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at, shipping_status FROM purchase_records WHERE class_id = ? ORDER BY created_at DESC")?;
 
         let records = stmt.query_map([class_id], |row| {
             Ok(PurchaseRecord {
@@ -743,6 +752,7 @@ impl Database {
                 quantity: row.get(6)?,
                 class_id: row.get(7)?,
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?).map_err(|_| rusqlite::Error::InvalidColumnType(8, "datetime".to_string(), rusqlite::types::Type::Text))?.with_timezone(&Utc),
+                shipping_status: row.get(9)?,
             })
         })?;
 
@@ -752,5 +762,14 @@ impl Database {
         }
 
         Ok(result)
+    }
+
+    pub fn update_shipping_status(&self, record_id: &str, status: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE purchase_records SET shipping_status = ? WHERE id = ?",
+            params![status, record_id],
+        )?;
+        Ok(())
     }
 }
