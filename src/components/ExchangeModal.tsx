@@ -13,6 +13,7 @@ interface ExchangeModalProps {
 
 export default function ExchangeModal({ isOpen, onClose, product, classId, onPurchaseSuccess }: ExchangeModalProps) {
   const [selectedStudentId, setSelectedStudentId] = useState('')
+  const [quantity, setQuantity] = useState(1)
   const [loading, setLoading] = useState(false)
   const [students, setStudents] = useState<Student[]>([])
   const [studentsLoading, setStudentsLoading] = useState(false)
@@ -59,7 +60,11 @@ export default function ExchangeModal({ isOpen, onClose, product, classId, onPur
     return null
 
   const selectedStudent = students.find(s => s.id === selectedStudentId)
-  const canAfford = selectedStudent ? selectedStudent.points >= product.points : false
+  const totalPoints = product ? product.points * quantity : 0
+  const canAfford = selectedStudent ? selectedStudent.points >= totalPoints : false
+  const maxQuantityByPoints = selectedStudent && product ? Math.floor(selectedStudent.points / product.points) : 0
+  const maxQuantityByStock = product ? product.stock : 0
+  const maxQuantity = Math.min(maxQuantityByPoints, maxQuantityByStock)
 
   const handlePurchase = async () => {
     if (!selectedStudentId || !canAfford || !product)
@@ -67,11 +72,12 @@ export default function ExchangeModal({ isOpen, onClose, product, classId, onPur
 
     setLoading(true)
     try {
-      await purchaseApi.create(product.id, selectedStudentId, 1)
-      showSuccess(`${selectedStudent?.name} 成功购买了 ${product.name}！`)
+      await purchaseApi.create(product.id, selectedStudentId, quantity)
+      showSuccess(`${selectedStudent?.name} 成功购买了 ${quantity} 件 ${product.name}！`)
       onPurchaseSuccess()
       onClose()
       setSelectedStudentId('')
+      setQuantity(1)
     }
     catch (error) {
       console.error('Purchase failed:', error)
@@ -84,6 +90,7 @@ export default function ExchangeModal({ isOpen, onClose, product, classId, onPur
 
   const handleClose = () => {
     setSelectedStudentId('')
+    setQuantity(1)
     onClose()
   }
 
@@ -110,15 +117,60 @@ export default function ExchangeModal({ isOpen, onClose, product, classId, onPur
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-lg text-gray-900">{product.name}</h3>
             <div className="text-right">
-              <div className="text-2xl font-black text-orange-600">{product.points}</div>
-              <div className="text-sm text-gray-500">积分</div>
+              <div className="text-2xl font-black text-orange-600">{totalPoints}</div>
+              <div className="text-sm text-gray-500">总积分</div>
             </div>
           </div>
-          <div className="text-sm text-gray-600">
-            剩余库存：
-            <span className="font-semibold text-green-600">{product.stock}</span>
-            {' '}
-            件
+
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-sm text-gray-600">
+              剩余库存：
+              <span className="font-semibold text-green-600">{product.stock}</span>
+              {' '}
+              件
+            </div>
+
+            {/* 数量选择器 */}
+            <div className="flex items-center space-x-3">
+              <span className="text-sm text-gray-600">购买数量：</span>
+              <div className="flex items-center border border-gray-300 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  disabled={quantity <= 1}
+                  className="px-3 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-l-lg transition-colors"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || 1
+                    const clampedValue = Math.max(1, Math.min(maxQuantity || 1, value))
+                    setQuantity(clampedValue)
+                  }}
+                  min="1"
+                  max={maxQuantity || 1}
+                  className="w-16 px-2 py-1 text-center border-0 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setQuantity(Math.min(maxQuantity || 1, quantity + 1))}
+                  disabled={quantity >= (maxQuantity || 1)}
+                  className="px-3 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-r-lg transition-colors"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-xs text-gray-500">
+            单价：{product.points} 积分/件
+            {maxQuantity > 0 && (
+              <span className="ml-4">最多可购买：{maxQuantity} 件</span>
+            )}
           </div>
         </div>
 
