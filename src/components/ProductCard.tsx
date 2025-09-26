@@ -96,7 +96,7 @@ export default function ProductCard({ product, onEdit, onDelete, onExchange }: P
           }`}
           disabled={isOutOfStock}
         >
-          {isOutOfStock ? '暂时缺货' : '立即兑换'}
+          {isOutOfStock ? '暂时缺货' : '添加购物车'}
         </button>
       </div>
 

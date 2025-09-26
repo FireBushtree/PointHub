@@ -24,3 +24,13 @@ export interface Product {
   classId: string
   createdAt: string
 }
+
+export interface CartItem {
+  id: string
+  productId: string
+  productName: string
+  points: number
+  studentId: string
+  studentName: string
+  quantity: number
+}

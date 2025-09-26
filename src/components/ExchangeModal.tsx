@@ -1,4 +1,4 @@
-import type { Product, Student } from '../types'
+import type { Product, Student, CartItem } from '../types'
 import { useEffect, useState } from 'react'
 import { studentApi } from '../services/tauriApi'
 
@@ -7,10 +7,10 @@ interface ExchangeModalProps {
   onClose: () => void
   product: Product | null
   classId: string
-  onExchange: (studentId: string, productId: string) => void
+  onAddToCart: (studentId: string, product: Product) => void
 }
 
-export default function ExchangeModal({ isOpen, onClose, product, classId, onExchange }: ExchangeModalProps) {
+export default function ExchangeModal({ isOpen, onClose, product, classId, onAddToCart }: ExchangeModalProps) {
   const [selectedStudentId, setSelectedStudentId] = useState('')
   const [loading, setLoading] = useState(false)
   const [students, setStudents] = useState<Student[]>([])
@@ -59,18 +59,18 @@ export default function ExchangeModal({ isOpen, onClose, product, classId, onExc
   const selectedStudent = students.find(s => s.id === selectedStudentId)
   const canAfford = selectedStudent ? selectedStudent.points >= product.points : false
 
-  const handleExchange = async () => {
+  const handleAddToCart = async () => {
     if (!selectedStudentId || !canAfford)
       return
 
     setLoading(true)
     try {
-      onExchange(selectedStudentId, product.id)
+      onAddToCart(selectedStudentId, product)
       onClose()
       setSelectedStudentId('')
     }
     catch (error) {
-      console.error('Exchange failed:', error)
+      console.error('Add to cart failed:', error)
     }
     finally {
       setLoading(false)
@@ -88,7 +88,7 @@ export default function ExchangeModal({ isOpen, onClose, product, classId, onExc
         {/* 头部 */}
         <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold">积分兑换</h2>
+            <h2 className="text-xl font-bold">添加到购物车</h2>
             <button
               onClick={handleClose}
               className="p-2 hover:bg-white/20 rounded-full transition-colors"
@@ -196,7 +196,7 @@ export default function ExchangeModal({ isOpen, onClose, product, classId, onExc
             取消
           </button>
           <button
-            onClick={handleExchange}
+            onClick={handleAddToCart}
             disabled={!canAfford || !selectedStudentId || loading}
             className={`flex-1 px-4 py-3 rounded-lg font-bold transition-colors ${
               canAfford && selectedStudentId && !loading
@@ -204,7 +204,7 @@ export default function ExchangeModal({ isOpen, onClose, product, classId, onExc
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
-            {loading ? '兑换中...' : '确认兑换'}
+            {loading ? '添加中...' : '添加到购物车'}
           </button>
         </div>
       </div>
