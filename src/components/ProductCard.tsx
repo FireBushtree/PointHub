@@ -1,4 +1,5 @@
 import type { Product } from '../types'
+import { ShoppingCart, X } from 'lucide-react'
 
 interface ProductCardProps {
   product: Product
@@ -87,17 +88,24 @@ export default function ProductCard({ product, onEdit, onDelete, onExchange }: P
         </div>
 
         {/* 购买/兑换按钮 */}
-        <button
-          onClick={() => onExchange && onExchange(product)}
-          className={`w-full py-3 px-6 rounded-xl font-bold text-sm shadow-lg ${
-            isOutOfStock
-              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-              : 'bg-orange-500 hover:bg-orange-600 text-white cursor-pointer transition-colors duration-200'
-          }`}
-          disabled={isOutOfStock}
-        >
-          {isOutOfStock ? '暂时缺货' : '添加购物车'}
-        </button>
+        <div className="flex justify-end">
+          <button
+            onClick={() => onExchange && onExchange(product)}
+            className={`p-3 rounded-xl font-bold text-sm shadow-lg transition-all duration-200 ${
+              isOutOfStock
+                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                : 'bg-orange-500 hover:bg-orange-600 text-white cursor-pointer hover:scale-105'
+            }`}
+            disabled={isOutOfStock}
+            title={isOutOfStock ? '暂时缺货' : '添加购物车'}
+          >
+            {isOutOfStock ? (
+              <X className="w-5 h-5" />
+            ) : (
+              <ShoppingCart className="w-5 h-5" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* 底部装饰条 */}
