@@ -135,7 +135,7 @@ export const purchaseApi = {
     })
   },
 
-  async updateShippingStatus(recordId: string, status: 'pending' | 'shipped' | 'delivered'): Promise<void> {
+  async updateShippingStatus(recordId: string, status: 'pending' | 'shipped'): Promise<void> {
     return await invoke('update_shipping_status', {
       recordId,
       request: {

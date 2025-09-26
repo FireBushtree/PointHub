@@ -2,8 +2,8 @@ import type { PaginatedPurchaseRecords, PurchaseRecord } from '../types'
 import { CheckCircle2, Package, Truck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { purchaseApi } from '../services/tauriApi'
-import { useToast } from './Toast'
 import Pagination from './Pagination'
+import { useToast } from './Toast'
 
 interface PurchaseHistoryListProps {
   classId: string
@@ -17,7 +17,7 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
     total: 0,
     totalPages: 0,
     currentPage: 1,
-    pageSize: 10
+    pageSize: 10,
   })
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState<string | null>(null)
@@ -56,7 +56,8 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
     switch (status) {
       case 'pending': return '待发货'
       case 'shipped': return '已发货'
-      case 'delivered': return '已送达'
+      // 向后兼容：如果数据库中还有delivered状态的记录
+      case 'delivered': return '已发货'
       default: return status
     }
   }
@@ -64,7 +65,8 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pending': return <Package className="w-4 h-4" />
-      case 'shipped': return <Truck className="w-4 h-4" />
+      case 'shipped': return <CheckCircle2 className="w-4 h-4" />
+      // 向后兼容：如果数据库中还有delivered状态的记录
       case 'delivered': return <CheckCircle2 className="w-4 h-4" />
       default: return <Package className="w-4 h-4" />
     }
@@ -73,22 +75,50 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'text-orange-600 bg-orange-50'
-      case 'shipped': return 'text-blue-600 bg-blue-50'
+      case 'shipped': return 'text-green-600 bg-green-50'
+      // 向后兼容：如果数据库中还有delivered状态的记录
       case 'delivered': return 'text-green-600 bg-green-50'
       default: return 'text-gray-600 bg-gray-50'
     }
   }
 
-  const handleUpdateStatus = async (recordId: string, newStatus: 'pending' | 'shipped' | 'delivered') => {
+  const handleUpdateStatus = async (recordId: string, newStatus: 'pending' | 'shipped') => {
+    // 保存原始状态用于回滚
+    const originalRecord = paginatedData.records.find(record => record.id === recordId)
+    if (!originalRecord) return
+
+    const originalStatus = originalRecord.shippingStatus
+
     try {
       setUpdating(recordId)
+
+      // 乐观更新：先更新前端状态
+      setPaginatedData(prev => ({
+        ...prev,
+        records: prev.records.map(record =>
+          record.id === recordId
+            ? { ...record, shippingStatus: newStatus }
+            : record
+        )
+      }))
+
+      // 异步调用后端API
       await purchaseApi.updateShippingStatus(recordId, newStatus)
       showSuccess(`发货状态已更新为：${getStatusText(newStatus)}`)
-      await loadRecords() // 重新加载数据
     }
     catch (error) {
       console.error('Failed to update shipping status:', error)
       showError('更新发货状态失败，请重试')
+
+      // 回滚前端状态
+      setPaginatedData(prev => ({
+        ...prev,
+        records: prev.records.map(record =>
+          record.id === recordId
+            ? { ...record, shippingStatus: originalStatus }
+            : record
+        )
+      }))
     }
     finally {
       setUpdating(null)
@@ -222,26 +252,13 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
                         <tr key={record.id} className={`hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10">
-                                <div className="h-10 w-10 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-                                  <Package className="h-5 w-5 text-white" />
-                                </div>
-                              </div>
-                              <div className="ml-4">
+                              <div>
                                 <div className="text-sm font-medium text-gray-900">{record.productName}</div>
-                                <div className="text-sm text-gray-500">
-                                  #
-                                  {record.productId.slice(0, 8)}
-                                </div>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">{record.studentName}</div>
-                            <div className="text-sm text-gray-500">
-                              ID:
-                              {record.studentId.slice(0, 8)}
-                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-900">
@@ -282,28 +299,7 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
                                   发货
                                 </button>
                               )}
-                              {record.shippingStatus === 'shipped' && (
-                                <button
-                                  onClick={() => handleUpdateStatus(record.id, 'delivered')}
-                                  disabled={updating === record.id}
-                                  className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                >
-                                  {updating === record.id
-                                    ? (
-                                        <div className="animate-spin rounded-full h-3 w-3 border border-white border-t-transparent mr-1"></div>
-                                      )
-                                    : (
-                                        <CheckCircle2 className="w-3 h-3 mr-1" />
-                                      )}
-                                  确认送达
-                                </button>
-                              )}
-                              {record.shippingStatus === 'delivered' && (
-                                <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600">
-                                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                                  已完成
-                                </span>
-                              )}
+                              {/* 已发货状态不显示任何按钮，流程结束 */}
                             </div>
                           </td>
                         </tr>

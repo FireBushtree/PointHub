@@ -45,7 +45,7 @@ export interface PurchaseRecord {
   quantity: number
   classId: string
   createdAt: string
-  shippingStatus: 'pending' | 'shipped' | 'delivered'
+  shippingStatus: 'pending' | 'shipped'
 }
 
 export interface PaginatedPurchaseRecords {
