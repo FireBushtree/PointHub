@@ -96,7 +96,7 @@ export default function ExchangeModal({ isOpen, onClose, product, classId, onPur
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-hidden">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden">
         {/* 头部 */}
         <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-4">
           <div className="flex items-center justify-between">
