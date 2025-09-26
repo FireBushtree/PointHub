@@ -9,9 +9,10 @@ import { useToast } from './Toast'
 interface ClassShopProps {
   classId: string
   className: string
+  onBackToStudents?: () => void
 }
 
-export default function ClassShop({ classId, className }: ClassShopProps) {
+export default function ClassShop({ classId, className, onBackToStudents }: ClassShopProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [currentView, setCurrentView] = useState<'shop' | 'history'>('shop')
@@ -119,6 +120,14 @@ export default function ClassShop({ classId, className }: ClassShopProps) {
 
             {/* 导航按钮 */}
             <div className="flex flex-col space-y-2">
+              {onBackToStudents && (
+                <button
+                  onClick={onBackToStudents}
+                  className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg transition-all duration-200 hover:scale-105"
+                >
+                  ← 返回学生管理
+                </button>
+              )}
               <button
                 onClick={() => setCurrentView('history')}
                 className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg transition-all duration-200 hover:scale-105"

@@ -1,8 +1,9 @@
 import type { RouteObject } from 'react-router-dom'
 import { createBrowserRouter } from 'react-router-dom'
 import ClassManagement from './pages/ClassManagement'
-import ClassStudents from './pages/ClassStudents'
 import ClassProducts from './pages/ClassProducts'
+import ClassShopPage from './pages/ClassShopPage'
+import ClassStudents from './pages/ClassStudents'
 
 const routes: RouteObject[] = [
   {
@@ -16,6 +17,10 @@ const routes: RouteObject[] = [
   {
     path: '/class/:classId/products',
     element: <ClassProducts />,
+  },
+  {
+    path: '/class/:classId/shop',
+    element: <ClassShopPage />,
   },
 ]
 
