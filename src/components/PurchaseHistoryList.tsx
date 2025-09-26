@@ -1,4 +1,4 @@
-import type { PaginatedPurchaseRecords, PurchaseRecord } from '../types'
+import type { PaginatedPurchaseRecords } from '../types'
 import { CheckCircle2, Package, Truck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { purchaseApi } from '../services/tauriApi'
@@ -85,7 +85,8 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
   const handleUpdateStatus = async (recordId: string, newStatus: 'pending' | 'shipped') => {
     // 保存原始状态用于回滚
     const originalRecord = paginatedData.records.find(record => record.id === recordId)
-    if (!originalRecord) return
+    if (!originalRecord)
+      return
 
     const originalStatus = originalRecord.shippingStatus
 
@@ -98,8 +99,8 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
         records: prev.records.map(record =>
           record.id === recordId
             ? { ...record, shippingStatus: newStatus }
-            : record
-        )
+            : record,
+        ),
       }))
 
       // 异步调用后端API
@@ -116,8 +117,8 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
         records: prev.records.map(record =>
           record.id === recordId
             ? { ...record, shippingStatus: originalStatus }
-            : record
-        )
+            : record,
+        ),
       }))
     }
     finally {
