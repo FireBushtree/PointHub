@@ -4,7 +4,7 @@ import { productApi } from '../services/tauriApi'
 import ExchangeModal from './ExchangeModal'
 import ProductCard from './ProductCard'
 import PurchaseHistoryList from './PurchaseHistoryList'
-import { useToast } from './Toast'
+import { ToastContainer, useToast } from './Toast'
 
 interface ClassShopProps {
   classId: string
@@ -20,7 +20,8 @@ export default function ClassShop({ classId, className, onBackToStudents }: Clas
     isOpen: false,
     product: null,
   })
-  const { showError } = useToast()
+
+  const { showError, showSuccess, toasts, removeToast } = useToast()
 
   const loadData = async () => {
     try {
@@ -45,7 +46,13 @@ export default function ClassShop({ classId, className, onBackToStudents }: Clas
     setExchangeModal({ isOpen: true, product })
   }
 
-  const handlePurchaseSuccess = async () => {
+  const handlePurchaseSuccess = async (config: any) => {
+    const {
+      selectedStudent,
+      quantity,
+      product,
+    } = config
+    showSuccess(`${selectedStudent?.name} 成功购买了 ${quantity} 件 ${product.name}！`)
     await loadData() // 重新加载数据刷新库存和学生积分
   }
 
@@ -211,6 +218,11 @@ export default function ClassShop({ classId, className, onBackToStudents }: Clas
           product={exchangeModal.product}
           classId={classId}
           onPurchaseSuccess={handlePurchaseSuccess}
+        />
+
+        <ToastContainer
+          toasts={toasts}
+          onRemoveToast={removeToast}
         />
       </div>
     </div>
