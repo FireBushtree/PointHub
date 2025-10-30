@@ -1,6 +1,7 @@
 use std::sync::Mutex;
 use std::path::PathBuf;
 use rusqlite::{Connection, Result as SqliteResult, params};
+use rusqlite::OptionalExtension;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use tauri::{AppHandle, Manager};
@@ -49,7 +50,7 @@ impl Database {
     }
 
     fn init_tables(&self) -> SqliteResult<()> {
-        let conn = self.conn.lock().unwrap();
+        let mut conn = self.conn.lock().unwrap();
 
         conn.execute(
             "CREATE TABLE IF NOT EXISTS classes (
@@ -127,7 +128,6 @@ impl Database {
                 class_id TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 shipping_status TEXT NOT NULL DEFAULT 'pending',
-                FOREIGN KEY(product_id) REFERENCES products(id),
                 FOREIGN KEY(student_id) REFERENCES students(id),
                 FOREIGN KEY(class_id) REFERENCES classes(id)
             )",
@@ -139,6 +139,65 @@ impl Database {
             "ALTER TABLE purchase_records ADD COLUMN shipping_status TEXT DEFAULT 'pending'",
             [],
         );
+
+        // Rebuild purchase_records table if old schema still contains product_id foreign key
+        if let Some(schema_sql) = conn
+            .query_row(
+                "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'purchase_records'",
+                [],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()? 
+        {
+            if schema_sql.contains("FOREIGN KEY(\"product_id\")")
+                || schema_sql.contains("FOREIGN KEY(product_id)")
+            {
+                conn.execute("PRAGMA foreign_keys = OFF", [])?;
+
+                let migration_result: SqliteResult<()> = (|| {
+                    let tx = conn.transaction()?;
+                    tx.execute("DROP TABLE IF EXISTS purchase_records_new", [])?;
+                    tx.execute(
+                        "CREATE TABLE purchase_records_new (
+                            id TEXT PRIMARY KEY,
+                            product_id TEXT NOT NULL,
+                            product_name TEXT NOT NULL,
+                            points INTEGER NOT NULL,
+                            student_id TEXT NOT NULL,
+                            student_name TEXT NOT NULL,
+                            quantity INTEGER NOT NULL,
+                            class_id TEXT NOT NULL,
+                            created_at TEXT NOT NULL,
+                            shipping_status TEXT NOT NULL DEFAULT 'pending',
+                            FOREIGN KEY(student_id) REFERENCES students(id),
+                            FOREIGN KEY(class_id) REFERENCES classes(id)
+                        )",
+                        [],
+                    )?;
+
+                    tx.execute(
+                        "INSERT INTO purchase_records_new (
+                            id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at, shipping_status
+                        )
+                        SELECT
+                            id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at, COALESCE(shipping_status, 'pending')
+                        FROM purchase_records",
+                        [],
+                    )?;
+
+                    tx.execute("DROP TABLE purchase_records", [])?;
+                    tx.execute(
+                        "ALTER TABLE purchase_records_new RENAME TO purchase_records",
+                        [],
+                    )?;
+                    tx.commit()?;
+                    Ok(())
+                })();
+
+                conn.execute("PRAGMA foreign_keys = ON", [])?;
+                migration_result?;
+            }
+        }
 
         Ok(())
     }
