@@ -101,6 +101,7 @@ pub struct PurchaseRecord {
     pub created_at: DateTime<Utc>,
     #[serde(rename = "shippingStatus")]
     pub shipping_status: String,
+    pub source: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -125,4 +126,63 @@ pub struct PaginatedPurchaseRecords {
     pub current_page: i64,
     #[serde(rename = "pageSize")]
     pub page_size: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WheelSlot {
+    pub id: String,
+    #[serde(rename = "classId")]
+    pub class_id: String,
+    #[serde(rename = "productId")]
+    pub product_id: String,
+    #[serde(rename = "productName")]
+    pub product_name: String,
+    #[serde(rename = "productPoints")]
+    pub product_points: i32,
+    #[serde(rename = "productStock")]
+    pub product_stock: i32,
+    #[serde(rename = "slotIndex")]
+    pub slot_index: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WheelConfig {
+    #[serde(rename = "classId")]
+    pub class_id: String,
+    #[serde(rename = "spinCost")]
+    pub spin_cost: i32,
+    pub slots: Vec<WheelSlot>,
+    #[serde(rename = "createdAt")]
+    pub created_at: DateTime<Utc>,
+    #[serde(rename = "updatedAt")]
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SaveWheelConfigRequest {
+    #[serde(rename = "spinCost")]
+    pub spin_cost: i32,
+    #[serde(rename = "productIds")]
+    pub product_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpinWheelRequest {
+    #[serde(rename = "studentId")]
+    pub student_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpinWheelResult {
+    #[serde(rename = "winningSlot")]
+    pub winning_slot: WheelSlot,
+    #[serde(rename = "spentPoints")]
+    pub spent_points: i32,
+    #[serde(rename = "remainingPoints")]
+    pub remaining_points: i32,
+    #[serde(rename = "studentId")]
+    pub student_id: String,
+    #[serde(rename = "studentName")]
+    pub student_name: String,
+    pub record: PurchaseRecord,
 }

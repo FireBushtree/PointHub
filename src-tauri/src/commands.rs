@@ -1,6 +1,6 @@
 use tauri::State;
 use crate::database::Database;
-use crate::models::{Class, Student, CreateClassRequest, UpdateClassRequest, CreateStudentRequest, UpdateStudentRequest, Product, CreateProductRequest, UpdateProductRequest, PurchaseRecord, CreatePurchaseRequest, UpdateShippingStatusRequest, PaginatedPurchaseRecords};
+use crate::models::{Class, Student, CreateClassRequest, UpdateClassRequest, CreateStudentRequest, UpdateStudentRequest, Product, CreateProductRequest, UpdateProductRequest, PurchaseRecord, CreatePurchaseRequest, UpdateShippingStatusRequest, PaginatedPurchaseRecords, WheelConfig, SaveWheelConfigRequest, SpinWheelRequest, SpinWheelResult};
 use std::fs;
 
 // Class commands
@@ -116,13 +116,32 @@ pub async fn get_purchase_records_by_class(database: State<'_, Database>, class_
 }
 
 #[tauri::command]
-pub async fn get_purchase_records_paginated(database: State<'_, Database>, class_id: String, page: i64, page_size: i64) -> Result<PaginatedPurchaseRecords, String> {
-    database.get_purchase_records_paginated(&class_id, page, page_size)
+pub async fn get_purchase_records_paginated(database: State<'_, Database>, class_id: String, page: i64, page_size: i64, source: Option<String>) -> Result<PaginatedPurchaseRecords, String> {
+    database.get_purchase_records_paginated(&class_id, page, page_size, source.as_deref())
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn update_shipping_status(database: State<'_, Database>, record_id: String, request: UpdateShippingStatusRequest) -> Result<(), String> {
     database.update_shipping_status(&record_id, &request.shipping_status)
+        .map_err(|e| e.to_string())
+}
+
+// Wheel commands
+#[tauri::command]
+pub async fn get_wheel_config(database: State<'_, Database>, class_id: String) -> Result<WheelConfig, String> {
+    database.get_wheel_config(&class_id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn save_wheel_config(database: State<'_, Database>, class_id: String, request: SaveWheelConfigRequest) -> Result<WheelConfig, String> {
+    database.save_wheel_config(&class_id, request)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn spin_wheel(database: State<'_, Database>, class_id: String, request: SpinWheelRequest) -> Result<SpinWheelResult, String> {
+    database.spin_wheel(&class_id, request)
         .map_err(|e| e.to_string())
 }

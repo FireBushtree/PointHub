@@ -1,4 +1,4 @@
-import type { Class, Product, PurchaseRecord, PaginatedPurchaseRecords, Student } from '../types'
+import type { Class, Product, PurchaseRecord, PaginatedPurchaseRecords, Student, WheelConfig, SpinWheelResult } from '../types'
 import { invoke } from '@tauri-apps/api/core'
 
 // Class API
@@ -64,6 +64,9 @@ export const studentApi = {
     if (studentData.classId !== undefined) {
       request.class_id = studentData.classId
     }
+    if (studentData.studentNumber !== undefined) {
+      request.student_number = studentData.studentNumber
+    }
 
     return await invoke('update_student', { id, request })
   },
@@ -127,11 +130,12 @@ export const purchaseApi = {
     return await invoke('get_purchase_records_by_class', { classId })
   },
 
-  async getByClassPaginated(classId: string, page: number, pageSize: number): Promise<PaginatedPurchaseRecords> {
+  async getByClassPaginated(classId: string, page: number, pageSize: number, source?: '购买' | '抽奖' | 'all'): Promise<PaginatedPurchaseRecords> {
     return await invoke('get_purchase_records_paginated', {
       classId,
       page,
-      pageSize
+      pageSize,
+      source,
     })
   },
 
@@ -140,6 +144,32 @@ export const purchaseApi = {
       recordId,
       request: {
         shipping_status: status,
+      },
+    })
+  },
+}
+
+// Wheel API
+export const wheelApi = {
+  async getConfig(classId: string): Promise<WheelConfig> {
+    return await invoke('get_wheel_config', { classId })
+  },
+
+  async saveConfig(classId: string, spinCost: number, productIds: string[]): Promise<WheelConfig> {
+    return await invoke('save_wheel_config', {
+      classId,
+      request: {
+        spinCost,
+        productIds,
+      },
+    })
+  },
+
+  async spin(classId: string, studentId: string): Promise<SpinWheelResult> {
+    return await invoke('spin_wheel', {
+      classId,
+      request: {
+        studentId,
       },
     })
   },

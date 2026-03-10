@@ -3,7 +3,7 @@ import { CheckCircle2, Package, Truck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { purchaseApi } from '../services/tauriApi'
 import Pagination from './Pagination'
-import { useToast } from './Toast'
+import { ToastContainer, useToast } from './Toast'
 
 interface PurchaseHistoryListProps {
   classId: string
@@ -22,13 +22,14 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
+  const [sourceFilter, setSourceFilter] = useState<'all' | '购买' | '抽奖'>('all')
   const [pageSize] = useState(10) // 每页显示10条记录
-  const { showError, showSuccess } = useToast()
+  const { toasts, removeToast, showError, showSuccess } = useToast()
 
   const loadRecords = async (page: number = currentPage) => {
     try {
       setLoading(true)
-      const data = await purchaseApi.getByClassPaginated(classId, page, pageSize)
+      const data = await purchaseApi.getByClassPaginated(classId, page, pageSize, sourceFilter)
       setPaginatedData(data)
       setCurrentPage(page)
     }
@@ -46,10 +47,16 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
       loadRecords(1) // 重新加载时回到第一页
       setCurrentPage(1)
     }
-  }, [classId])
+  }, [classId, sourceFilter])
 
   const handlePageChange = (page: number) => {
     loadRecords(page)
+  }
+
+  const getSourceText = (source: string) => {
+    if (source === '抽奖')
+      return '抽奖'
+    return '购买'
   }
 
   const getStatusText = (status: string) => {
@@ -196,6 +203,17 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
                 {' '}
                 条
               </div>
+              <div className="bg-white/20 rounded-full px-3 py-1">
+                <select
+                  value={sourceFilter}
+                  onChange={event => setSourceFilter(event.target.value as 'all' | '购买' | '抽奖')}
+                  className="bg-transparent text-white text-sm font-bold outline-none"
+                >
+                  <option value="all" className="text-gray-900">全部来源</option>
+                  <option value="购买" className="text-gray-900">仅购买</option>
+                  <option value="抽奖" className="text-gray-900">仅抽奖</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -241,6 +259,9 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
                           购买时间
                         </th>
                         <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                          来源
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
                           发货状态
                         </th>
                         <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
@@ -275,6 +296,16 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {new Date(record.createdAt).toLocaleString('zh-CN')}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                              getSourceText(record.source) === '抽奖'
+                                ? 'bg-purple-100 text-purple-700'
+                                : 'bg-blue-100 text-blue-700'
+                            }`}
+                            >
+                              {getSourceText(record.source)}
+                            </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium gap-1 ${getStatusColor(record.shippingStatus)}`}>
@@ -321,6 +352,11 @@ export default function PurchaseHistoryList({ classId, className, onBackToShop }
               </div>
             )}
       </div>
+
+      <ToastContainer
+        toasts={toasts}
+        onRemoveToast={removeToast}
+      />
     </div>
   )
 }

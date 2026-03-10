@@ -6,7 +6,25 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use tauri::{AppHandle, Manager};
 
-use crate::models::{Class, Student, CreateClassRequest, UpdateClassRequest, CreateStudentRequest, UpdateStudentRequest, Product, CreateProductRequest, UpdateProductRequest, PurchaseRecord, CreatePurchaseRequest, PaginatedPurchaseRecords};
+use crate::models::{
+    Class,
+    Student,
+    CreateClassRequest,
+    UpdateClassRequest,
+    CreateStudentRequest,
+    UpdateStudentRequest,
+    Product,
+    CreateProductRequest,
+    UpdateProductRequest,
+    PurchaseRecord,
+    CreatePurchaseRequest,
+    PaginatedPurchaseRecords,
+    WheelConfig,
+    WheelSlot,
+    SaveWheelConfigRequest,
+    SpinWheelResult,
+    SpinWheelRequest,
+};
 
 pub struct Database {
     pub conn: Mutex<Connection>,
@@ -128,6 +146,7 @@ impl Database {
                 class_id TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 shipping_status TEXT NOT NULL DEFAULT 'pending',
+                source TEXT NOT NULL DEFAULT '购买',
                 FOREIGN KEY(student_id) REFERENCES students(id),
                 FOREIGN KEY(class_id) REFERENCES classes(id)
             )",
@@ -139,6 +158,44 @@ impl Database {
             "ALTER TABLE purchase_records ADD COLUMN shipping_status TEXT DEFAULT 'pending'",
             [],
         );
+
+        // Add source column to existing purchase_records table if it doesn't exist
+        let _ = conn.execute(
+            "ALTER TABLE purchase_records ADD COLUMN source TEXT DEFAULT '购买'",
+            [],
+        );
+
+        // Backfill source for historical records
+        conn.execute(
+            "UPDATE purchase_records SET source = '购买' WHERE source = '' OR source IS NULL",
+            [],
+        )?;
+
+        // One wheel config per class
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS wheel_configs (
+                class_id TEXT PRIMARY KEY,
+                spin_cost INTEGER NOT NULL DEFAULT 10,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(class_id) REFERENCES classes(id)
+            )",
+            [],
+        )?;
+
+        // Wheel slots control probability via duplicated slots.
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS wheel_slots (
+                id TEXT PRIMARY KEY,
+                class_id TEXT NOT NULL,
+                product_id TEXT NOT NULL,
+                slot_index INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(class_id) REFERENCES classes(id),
+                FOREIGN KEY(product_id) REFERENCES products(id)
+            )",
+            [],
+        )?;
 
         // Rebuild purchase_records table if old schema still contains product_id foreign key
         if let Some(schema_sql) = conn
@@ -169,6 +226,7 @@ impl Database {
                             class_id TEXT NOT NULL,
                             created_at TEXT NOT NULL,
                             shipping_status TEXT NOT NULL DEFAULT 'pending',
+                            source TEXT NOT NULL DEFAULT '购买',
                             FOREIGN KEY(student_id) REFERENCES students(id),
                             FOREIGN KEY(class_id) REFERENCES classes(id)
                         )",
@@ -177,10 +235,10 @@ impl Database {
 
                     tx.execute(
                         "INSERT INTO purchase_records_new (
-                            id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at, shipping_status
+                            id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at, shipping_status, source
                         )
                         SELECT
-                            id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at, COALESCE(shipping_status, 'pending')
+                            id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at, COALESCE(shipping_status, 'pending'), COALESCE(source, '购买')
                         FROM purchase_records",
                         [],
                     )?;
@@ -347,6 +405,10 @@ impl Database {
 
         // Delete students first
         conn.execute("DELETE FROM students WHERE class_id = ?", [id])?;
+        conn.execute("DELETE FROM products WHERE class_id = ?", [id])?;
+        conn.execute("DELETE FROM purchase_records WHERE class_id = ?", [id])?;
+        conn.execute("DELETE FROM wheel_slots WHERE class_id = ?", [id])?;
+        conn.execute("DELETE FROM wheel_configs WHERE class_id = ?", [id])?;
 
         // Delete class
         conn.execute("DELETE FROM classes WHERE id = ?", [id])?;
@@ -752,7 +814,7 @@ impl Database {
         let created_at = Utc::now();
 
         conn.execute(
-            "INSERT INTO purchase_records (id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at, shipping_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO purchase_records (id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at, shipping_status, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             params![
                 &id,
                 &product.id,
@@ -763,7 +825,8 @@ impl Database {
                 &req.quantity,
                 &product.class_id,
                 &created_at.to_rfc3339(),
-                "pending"
+                "pending",
+                "购买"
             ],
         )?;
 
@@ -793,12 +856,13 @@ impl Database {
             class_id: product.class_id,
             created_at,
             shipping_status: "pending".to_string(),
+            source: "购买".to_string(),
         })
     }
 
     pub fn get_purchase_records_by_class(&self, class_id: &str) -> Result<Vec<PurchaseRecord>, Box<dyn std::error::Error>> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at, shipping_status FROM purchase_records WHERE class_id = ? ORDER BY created_at DESC")?;
+        let mut stmt = conn.prepare("SELECT id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at, shipping_status, source FROM purchase_records WHERE class_id = ? ORDER BY created_at DESC")?;
 
         let records = stmt.query_map([class_id], |row| {
             Ok(PurchaseRecord {
@@ -812,6 +876,7 @@ impl Database {
                 class_id: row.get(7)?,
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?).map_err(|_| rusqlite::Error::InvalidColumnType(8, "datetime".to_string(), rusqlite::types::Type::Text))?.with_timezone(&Utc),
                 shipping_status: row.get(9)?,
+                source: row.get(10)?,
             })
         })?;
 
@@ -823,13 +888,16 @@ impl Database {
         Ok(result)
     }
 
-    pub fn get_purchase_records_paginated(&self, class_id: &str, page: i64, page_size: i64) -> Result<PaginatedPurchaseRecords, Box<dyn std::error::Error>> {
+    pub fn get_purchase_records_paginated(&self, class_id: &str, page: i64, page_size: i64, source: Option<&str>) -> Result<PaginatedPurchaseRecords, Box<dyn std::error::Error>> {
         let conn = self.conn.lock().unwrap();
+
+        let source_filter = source.filter(|value| !value.trim().is_empty() && *value != "all");
+        let source_value = source_filter.unwrap_or("");
 
         // 获取总记录数
         let total: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM purchase_records WHERE class_id = ?",
-            [class_id],
+            "SELECT COUNT(*) FROM purchase_records WHERE class_id = ?1 AND (?2 = '' OR source = ?2)",
+            params![class_id, source_value],
             |row| row.get(0),
         )?;
 
@@ -841,14 +909,14 @@ impl Database {
 
         // 分页查询数据
         let mut stmt = conn.prepare(
-            "SELECT id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at, shipping_status
+            "SELECT id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at, shipping_status, source
              FROM purchase_records
-             WHERE class_id = ?
+             WHERE class_id = ?1 AND (?2 = '' OR source = ?2)
              ORDER BY created_at DESC
-             LIMIT ? OFFSET ?"
+             LIMIT ?3 OFFSET ?4"
         )?;
 
-        let records = stmt.query_map(params![class_id, page_size, offset], |row| {
+        let records = stmt.query_map(params![class_id, source_value, page_size, offset], |row| {
             Ok(PurchaseRecord {
                 id: row.get(0)?,
                 product_id: row.get(1)?,
@@ -860,6 +928,7 @@ impl Database {
                 class_id: row.get(7)?,
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?).map_err(|_| rusqlite::Error::InvalidColumnType(8, "datetime".to_string(), rusqlite::types::Type::Text))?.with_timezone(&Utc),
                 shipping_status: row.get(9)?,
+                source: row.get(10)?,
             })
         })?;
 
@@ -874,6 +943,294 @@ impl Database {
             total_pages,
             current_page: page,
             page_size,
+        })
+    }
+
+    pub fn get_wheel_config(&self, class_id: &str) -> Result<WheelConfig, Box<dyn std::error::Error>> {
+        let conn = self.conn.lock().unwrap();
+        let now_rfc3339 = Utc::now().to_rfc3339();
+        let class_exists: Option<String> = conn
+            .query_row("SELECT id FROM classes WHERE id = ?", [class_id], |row| row.get(0))
+            .optional()?;
+        if class_exists.is_none() {
+            return Err("班级不存在".into());
+        }
+
+        let existing: Option<(i32, String, String)> = conn
+            .query_row(
+                "SELECT spin_cost, created_at, updated_at FROM wheel_configs WHERE class_id = ?",
+                [class_id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .optional()?;
+
+        if existing.is_none() {
+            conn.execute(
+                "INSERT INTO wheel_configs (class_id, spin_cost, created_at, updated_at) VALUES (?1, ?2, ?3, ?4)",
+                params![class_id, 10, now_rfc3339, now_rfc3339],
+            )?;
+        }
+
+        let (spin_cost, created_at_raw, updated_at_raw): (i32, String, String) = conn.query_row(
+            "SELECT spin_cost, created_at, updated_at FROM wheel_configs WHERE class_id = ?",
+            [class_id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )?;
+
+        let mut stmt = conn.prepare(
+            "SELECT
+                ws.id,
+                ws.class_id,
+                ws.product_id,
+                p.name,
+                p.points,
+                p.stock,
+                ws.slot_index
+             FROM wheel_slots ws
+             JOIN products p ON p.id = ws.product_id
+             WHERE ws.class_id = ?
+             ORDER BY ws.slot_index ASC",
+        )?;
+
+        let slot_rows = stmt.query_map([class_id], |row| {
+            Ok(WheelSlot {
+                id: row.get(0)?,
+                class_id: row.get(1)?,
+                product_id: row.get(2)?,
+                product_name: row.get(3)?,
+                product_points: row.get(4)?,
+                product_stock: row.get(5)?,
+                slot_index: row.get(6)?,
+            })
+        })?;
+
+        let mut slots = Vec::new();
+        for slot in slot_rows {
+            slots.push(slot?);
+        }
+
+        Ok(WheelConfig {
+            class_id: class_id.to_string(),
+            spin_cost,
+            slots,
+            created_at: DateTime::parse_from_rfc3339(&created_at_raw)
+                .map(|dt| dt.with_timezone(&Utc))
+                .unwrap_or_else(|_| Utc::now()),
+            updated_at: DateTime::parse_from_rfc3339(&updated_at_raw)
+                .map(|dt| dt.with_timezone(&Utc))
+                .unwrap_or_else(|_| Utc::now()),
+        })
+    }
+
+    pub fn save_wheel_config(
+        &self,
+        class_id: &str,
+        req: SaveWheelConfigRequest,
+    ) -> Result<WheelConfig, Box<dyn std::error::Error>> {
+        if req.spin_cost <= 0 {
+            return Err("抽奖消耗积分必须大于0".into());
+        }
+        if req.product_ids.is_empty() {
+            return Err("转盘至少需要一个奖品格子".into());
+        }
+
+        let mut conn = self.conn.lock().unwrap();
+        let tx = conn.transaction()?;
+
+        let class_exists: Option<String> = tx
+            .query_row(
+                "SELECT id FROM classes WHERE id = ?",
+                [class_id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        if class_exists.is_none() {
+            return Err("班级不存在".into());
+        }
+
+        for product_id in &req.product_ids {
+            let product_exists: Option<String> = tx
+                .query_row(
+                    "SELECT id FROM products WHERE id = ? AND class_id = ?",
+                    params![product_id, class_id],
+                    |row| row.get(0),
+                )
+                .optional()?;
+            if product_exists.is_none() {
+                return Err(format!("奖品不存在或不属于当前班级: {}", product_id).into());
+            }
+        }
+
+        let now = Utc::now().to_rfc3339();
+        tx.execute(
+            "INSERT INTO wheel_configs (class_id, spin_cost, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(class_id) DO UPDATE SET
+                spin_cost = excluded.spin_cost,
+                updated_at = excluded.updated_at",
+            params![class_id, req.spin_cost, now, now],
+        )?;
+
+        tx.execute("DELETE FROM wheel_slots WHERE class_id = ?", [class_id])?;
+
+        for (index, product_id) in req.product_ids.iter().enumerate() {
+            tx.execute(
+                "INSERT INTO wheel_slots (id, class_id, product_id, slot_index, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![
+                    Uuid::new_v4().to_string(),
+                    class_id,
+                    product_id,
+                    index as i32,
+                    now
+                ],
+            )?;
+        }
+
+        tx.commit()?;
+        drop(conn);
+
+        self.get_wheel_config(class_id)
+    }
+
+    pub fn spin_wheel(
+        &self,
+        class_id: &str,
+        req: SpinWheelRequest,
+    ) -> Result<SpinWheelResult, Box<dyn std::error::Error>> {
+        let mut conn = self.conn.lock().unwrap();
+        let tx = conn.transaction()?;
+
+        let spin_cost: i32 = tx
+            .query_row(
+                "SELECT spin_cost FROM wheel_configs WHERE class_id = ?",
+                [class_id],
+                |row| row.get(0),
+            )
+            .optional()?
+            .ok_or("请先配置大转盘")?;
+
+        if spin_cost <= 0 {
+            return Err("抽奖消耗积分配置无效".into());
+        }
+
+        let mut slots_stmt = tx.prepare(
+            "SELECT
+                ws.id,
+                ws.class_id,
+                ws.product_id,
+                p.name,
+                p.points,
+                p.stock,
+                ws.slot_index
+             FROM wheel_slots ws
+             JOIN products p ON p.id = ws.product_id
+             WHERE ws.class_id = ?
+             ORDER BY ws.slot_index ASC",
+        )?;
+
+        let slot_rows = slots_stmt.query_map([class_id], |row| {
+            Ok(WheelSlot {
+                id: row.get(0)?,
+                class_id: row.get(1)?,
+                product_id: row.get(2)?,
+                product_name: row.get(3)?,
+                product_points: row.get(4)?,
+                product_stock: row.get(5)?,
+                slot_index: row.get(6)?,
+            })
+        })?;
+
+        let mut slots = Vec::new();
+        for slot in slot_rows {
+            slots.push(slot?);
+        }
+        drop(slots_stmt);
+
+        if slots.is_empty() {
+            return Err("转盘未配置奖品格子".into());
+        }
+
+        if let Some(slot) = slots.iter().find(|slot| slot.product_stock <= 0) {
+            return Err(format!("奖品库存不足，无法开启转盘: {}", slot.product_name).into());
+        }
+
+        let (student_name, current_points): (String, i32) = tx
+            .query_row(
+                "SELECT name, points FROM students WHERE id = ? AND class_id = ?",
+                params![req.student_id, class_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()?
+            .ok_or("学生不存在或不属于当前班级")?;
+
+        if current_points < spin_cost {
+            return Err("积分不足，无法开启转盘".into());
+        }
+
+        let winning_index = (Uuid::new_v4().as_u128() % slots.len() as u128) as usize;
+        let mut winning_slot = slots[winning_index].clone();
+
+        tx.execute(
+            "UPDATE students SET points = points - ? WHERE id = ?",
+            params![spin_cost, req.student_id],
+        )?;
+
+        let stock_rows = tx.execute(
+            "UPDATE products SET stock = stock - 1 WHERE id = ? AND stock > 0",
+            params![winning_slot.product_id],
+        )?;
+        if stock_rows == 0 {
+            return Err("奖品库存不足，无法完成抽奖".into());
+        }
+        winning_slot.product_stock -= 1;
+
+        let record_id = Uuid::new_v4().to_string();
+        let created_at = Utc::now();
+        tx.execute(
+            "INSERT INTO purchase_records (id, product_id, product_name, points, student_id, student_name, quantity, class_id, created_at, shipping_status, source)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1, ?7, ?8, 'pending', '抽奖')",
+            params![
+                record_id,
+                winning_slot.product_id,
+                winning_slot.product_name,
+                spin_cost,
+                req.student_id,
+                student_name,
+                class_id,
+                created_at.to_rfc3339(),
+            ],
+        )?;
+
+        let remaining_points: i32 = tx.query_row(
+            "SELECT points FROM students WHERE id = ?",
+            [req.student_id.as_str()],
+            |row| row.get(0),
+        )?;
+
+        tx.commit()?;
+
+        let record = PurchaseRecord {
+            id: record_id,
+            product_id: winning_slot.product_id.clone(),
+            product_name: winning_slot.product_name.clone(),
+            points: spin_cost,
+            student_id: req.student_id.clone(),
+            student_name: student_name.clone(),
+            quantity: 1,
+            class_id: class_id.to_string(),
+            created_at,
+            shipping_status: "pending".to_string(),
+            source: "抽奖".to_string(),
+        };
+
+        Ok(SpinWheelResult {
+            winning_slot,
+            spent_points: spin_cost,
+            remaining_points,
+            student_id: req.student_id,
+            student_name,
+            record,
         })
     }
 

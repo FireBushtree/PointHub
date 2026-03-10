@@ -33,7 +33,10 @@ pub fn run() {
             create_purchase_record,
             get_purchase_records_by_class,
             get_purchase_records_paginated,
-            update_shipping_status
+            update_shipping_status,
+            get_wheel_config,
+            save_wheel_config,
+            spin_wheel
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -4,6 +4,7 @@ import { productApi } from '../services/tauriApi'
 import ExchangeModal from './ExchangeModal'
 import ProductCard from './ProductCard'
 import PurchaseHistoryList from './PurchaseHistoryList'
+import SpinWheelPanel from './SpinWheelPanel'
 import { ToastContainer, useToast } from './Toast'
 
 interface ClassShopProps {
@@ -15,7 +16,7 @@ interface ClassShopProps {
 export default function ClassShop({ classId, className, onBackToStudents }: ClassShopProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
-  const [currentView, setCurrentView] = useState<'shop' | 'history'>('shop')
+  const [currentView, setCurrentView] = useState<'shop' | 'history' | 'wheel'>('shop')
   const [exchangeModal, setExchangeModal] = useState<{ isOpen: boolean, product: Product | null }>({
     isOpen: false,
     product: null,
@@ -70,6 +71,24 @@ export default function ClassShop({ classId, className, onBackToStudents }: Clas
         className={className}
         onBackToShop={() => setCurrentView('shop')}
       />
+    )
+  }
+
+  if (currentView === 'wheel') {
+    return (
+      <>
+        <SpinWheelPanel
+          classId={classId}
+          className={className}
+          onBackToShop={() => setCurrentView('shop')}
+          showSuccess={showSuccess}
+          showError={showError}
+        />
+        <ToastContainer
+          toasts={toasts}
+          onRemoveToast={removeToast}
+        />
+      </>
     )
   }
 
@@ -140,6 +159,12 @@ export default function ClassShop({ classId, className, onBackToStudents }: Clas
                 className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg transition-all duration-200 hover:scale-105"
               >
                 📋 购物记录
+              </button>
+              <button
+                onClick={() => setCurrentView('wheel')}
+                className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg transition-all duration-200 hover:scale-105"
+              >
+                🎡 积分大转盘
               </button>
               <div className="bg-yellow-400 text-yellow-900 px-4 py-2 rounded-full text-sm font-bold shadow-lg">
                 🔥 热销中

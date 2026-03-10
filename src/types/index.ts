@@ -46,6 +46,7 @@ export interface PurchaseRecord {
   classId: string
   createdAt: string
   shippingStatus: 'pending' | 'shipped'
+  source: '购买' | '抽奖'
 }
 
 export interface PaginatedPurchaseRecords {
@@ -54,4 +55,31 @@ export interface PaginatedPurchaseRecords {
   totalPages: number
   currentPage: number
   pageSize: number
+}
+
+export interface WheelSlot {
+  id: string
+  classId: string
+  productId: string
+  productName: string
+  productPoints: number
+  productStock: number
+  slotIndex: number
+}
+
+export interface WheelConfig {
+  classId: string
+  spinCost: number
+  slots: WheelSlot[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SpinWheelResult {
+  winningSlot: WheelSlot
+  spentPoints: number
+  remainingPoints: number
+  studentId: string
+  studentName: string
+  record: PurchaseRecord
 }
